@@ -23,7 +23,7 @@ The research behind every choice is in [AUDIT.md](./AUDIT.md).
 - [x] Answers to the open questions (2026-10-09, see "Answers" below)
 - [x] **Milestone 1 — scaffold, manifest, store validation, CI**
 - [x] **Milestone 2 — LEAP client: connection, framing, watchdog**
-- [ ] **Milestone 3 — pairing, discovery, configuration UX**
+- [x] **Milestone 3 — pairing, discovery, configuration UX**
 - [ ] **Milestone 4 — Caséta / RA2 Select model, devices, states, commands**
 - [ ] **Milestone 5 — Pico remotes and buttons (click, double, long)**
 - [ ] **Milestone 6 — scene actions, scene triggers, dashboard widget →
@@ -164,29 +164,46 @@ Findings to check on real hardware (milestone 3/4):
   (the model is not ready); the zone states are read explicitly at the end
   of the load, and again every 15 minutes (milestone 4).
 
-## Milestone 3 — pairing, discovery, configuration UX
+## Milestone 3 — pairing, discovery, configuration UX (done)
 
-- [ ] `src/leap/csr.js`: RSA-2048 key + PKCS#10 SHA-256 CSR with
-      `node:crypto` only (proof of concept already checked with OpenSSL).
-- [ ] `src/leap/pairing.js`: port 8083 with the LAP certificates, wait for
-      the `PhysicalAccess` message (button pressed), `/pair` CSR request,
-      `SigningResult`, CA choice (Caséta root vs `lutron-root`), check by a
-      ping on 8081. Line framing shared with the client.
-- [ ] `src/leap/assets.js`: LAP CA, certificate and key, `lutron-root` CA
-      (from pylutron-caseta, attribution in `NOTICE`).
-- [ ] `src/gladys/discovery.js` (bridges): `scanNetwork('mdns')`, parse
-      `SYSTYPE` (smartbridge, ra2select, radiora3, hwqs) and the serial from
-      the host name; one bridge → used; several → the action lists them and
-      asks for the IP; none → explain (Docker host, VLAN, manual IP).
-- [ ] `src/gladys/status.js`: `setConnectionStatus` in English and French
-      saying **what** is wrong: not paired, button not pressed in time,
-      bridge unreachable at <ip>, certificate refused (bridge reset? pair
-      again), connected to "Caséta Smart Bridge PRO, LEAP x.y, n devices".
-- [ ] Actions `pair_bridge`, `test_connection`, `forget_bridge`; the
-      credentials stored (question 4); the bridge found again by serial
-      number when its IP changes.
-- [ ] Tests: fake pairing server (button pressed, timeout, 401), CSR
-      verified by `crypto.X509Certificate`, discovery parsing.
+- `src/leap/csr.js`: RSA-2048 key + PKCS#10 SHA-256 request with
+  `node:crypto` only, verified by `openssl req -verify` in the tests.
+- `src/leap/assets.js`: LAP CA, certificate and key, `lutron-root`, copied
+  verbatim from pylutron-caseta (commit `c0dcc22`, 2026-10-05), checked
+  (fingerprints `38:C7:E9:46…` and `DC:16:E4:7F…`, key matching the
+  certificate).
+- `src/leap/pairing.js`: port 8083 with the LAP certificate (TLS 1.2),
+  LAP authority first then `lutron-root` (processor), wait for the
+  `PhysicalAccess` status, `/pair` CSR, signed certificate, check by a ping
+  on 8081. Typed errors `PairingTimeoutError`, `PairingRefusedError`.
+- `src/leap/discovery.js`: raw answers of the core mDNS scan →
+  `{ host, serial (hex), systype, family }`; `src/leap/bridgeInfo.js`:
+  `/project` (Caséta vs RA3 vs QSX) and the bridge device (name, model,
+  serial in hex, firmware).
+- `src/gladys/bridgeController.js`: configuration → session, actions
+  `pair_bridge` (mDNS search when no IP: none / several / one),
+  `test_connection` (ping or immediate reconnection), `forget_bridge`,
+  `refresh_devices` (reconnect and reload); credentials stored as hidden
+  config keys (verified in the Gladys sources: the form save only writes
+  `config_schema` keys and the front end never receives the others); the
+  bridge serial saved on the first connection; a bridge that changed IP is
+  found again by its serial (after 3 failed reconnections, at most every
+  5 minutes) and followed.
+- `src/gladys/messages.js`: every status and action result says what is
+  wrong and what to do, in English and French.
+- `index.js`: wired; `LUTRON_LEAP_PORT` / `LUTRON_PAIRING_PORT` move the
+  ports for development (the TLS checks stay on).
+- Tests: fake pairing server, controller against the fake bridge, end to
+  end (`test/index.e2e.test.js`: the real `index.js` against a fake Gladys
+  and a fake bridge).
+
+To check on the maintainer's hardware (Caséta Smart Hub, Diva, Pico):
+
+- [ ] mDNS answer of the bridge: host name `Lutron-<hex>.local`, `SYSTYPE`
+      value, and whether the Gladys core relays it (`scanNetwork`).
+- [ ] Pairing end to end, then the status "Connected to … LEAP x.y".
+- [ ] What a bridge does with a certificate it no longer knows (reset
+      bridge): TLS alert or silent close (see milestone 2 findings).
 
 ## Milestone 4 — Caséta / RA2 Select model, devices, states, commands
 

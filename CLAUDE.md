@@ -42,4 +42,9 @@ next milestones. The research behind them is in [AUDIT.md](./AUDIT.md).
 - CI failing on every job in under 2 seconds = Actions quota exhausted, not a
   bug: report it, do not change the code. Push at most once a day unless
   asked.
-- Store check: `npm run validate:manifest`.
+- Store check: `npm run validate:manifest`. If `npx` cannot install the
+  validator (npm mirror lag), run `node src/validate-cli.js <repo>
+--skip-image-check` from a clone of `GladysAssistant/integration-store`.
+- Tests talk to `test/helpers/fakeBridge.js` (LEAP over TLS with the test
+  certificates of `test/fixtures/tls/`) and `test/helpers/fakeGladys.js`;
+  never to a real bridge.

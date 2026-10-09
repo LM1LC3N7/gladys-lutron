@@ -5,7 +5,7 @@ control Lutron lighting, shades and fans and to use Pico remotes in Gladys
 scenes, **fully locally** over Lutron's LEAP protocol: Caséta (Smart Hub and
 Smart Bridge PRO), RA2 Select, and later RadioRA 3 and HomeWorks QSX.
 
-> **Status: in development** (milestone 2 of 8: LEAP client). The audit of existing libraries and
+> **Status: in development** (milestones 1 to 3 of 8 done: LEAP client, local pairing; devices come next). The audit of existing libraries and
 > integrations is in [AUDIT.md](./AUDIT.md), the implementation plan in
 > [TODO.md](./TODO.md).
 
@@ -32,6 +32,24 @@ Smart Bridge PRO), RA2 Select, and later RadioRA 3 and HomeWorks QSX.
   certificate, among other issues (see [AUDIT.md](./AUDIT.md) §2).
 - No duplicate of Gladys features: button presses, occupancy and battery are
   device features driving the core scene trigger, not custom triggers.
+
+## Development
+
+```sh
+npm ci
+npm run format:check && npm run lint && npm test && npm audit
+npm run validate:manifest   # Gladys store validator
+```
+
+- `src/leap/`: the LEAP client (TLS connection, session with keep-alive and
+  reconnection, pairing, mDNS answers parsing); no Gladys import.
+- `src/gladys/`: the Gladys adapter (configuration, bridge controller,
+  messages, frozen manifest keys).
+- `test/helpers/fakeBridge.js`: a fake Lutron bridge over TLS used by the
+  tests; `test/index.e2e.test.js` runs the real `index.js` against it and a
+  fake Gladys.
+- `LUTRON_LEAP_PORT` / `LUTRON_PAIRING_PORT`: development only, to reach a
+  fake bridge on other ports (TLS checks stay on).
 
 ## Disclaimer
 
