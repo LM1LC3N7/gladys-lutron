@@ -1,0 +1,282 @@
+# TODO — Lutron integration v1
+
+Handoff document: what is done, what was decided, what comes next. Keep it
+up to date at the end of every milestone (tick the boxes, move decisions in).
+The research behind every choice is in [AUDIT.md](./AUDIT.md).
+
+## Working method (same as gladys-frigate and gladys-ecoflow)
+
+- One milestone at a time, **one commit per milestone**, tests green before
+  moving on. Present a short plan before coding a milestone; ask blocking
+  questions instead of assuming.
+- After each milestone: `npm run format:check`, `npm run lint`, `npm test`,
+  `npm audit`, then check and update README, `docs/en.md`, `docs/fr.md`,
+  `CHANGELOG.md`, `CLAUDE.md` and this file.
+- CI: if **every** job fails in under 2 seconds, the GitHub Actions quota is
+  exhausted — do not change the code, tell the maintainer. Push at most once
+  a day unless the maintainer asks otherwise.
+- Code, comments, README in English; user docs in English and French.
+
+## Status
+
+- [x] **Milestone 0 — audit and plan** (this file, [AUDIT.md](./AUDIT.md))
+- [ ] Answers to the open questions below
+- [ ] **Milestone 1 — scaffold, manifest, store validation, CI**
+- [ ] **Milestone 2 — LEAP client: connection, framing, watchdog**
+- [ ] **Milestone 3 — pairing, discovery, configuration UX**
+- [ ] **Milestone 4 — Caséta / RA2 Select model, devices, states, commands**
+- [ ] **Milestone 5 — Pico remotes and buttons (click, double, long)**
+- [ ] **Milestone 6 — scene actions, scene triggers, dashboard widget →
+      release 0.1.0**
+- [ ] **Milestone 7 — RadioRA 3 / HomeWorks QSX, keypads, LEDs, colour →
+      release 0.2.0**
+- [ ] **Milestone 8 — hardening, diagnostics, forum announcement**
+
+## Open questions (blocking milestone 1)
+
+1. **Rename the repository to `gladys-lutron`?** Recommended, and only
+   possible before the first install: the repository name ends up in the
+   prefix of every device identifier (AUDIT.md §7). The maintainer renames
+   it in the GitHub settings; the code then uses
+   `ghcr.io/lm1lc3n7/gladys-lutron`.
+2. **Hardware available for testing?** Bridge model (L-BDG2 standard, L-BDGPRO2
+   PRO, RA2 Select, RA3, QSX), and the devices: dimmers, switches, Pico
+   models, shades (roller, Serena wood blinds), fan, occupancy sensors. The
+   fixtures of milestone 4 come from a real dump (diagnostics action,
+   anonymized). Without RA3/QSX hardware, milestone 7 ships "untested" and
+   asks for testers on the forum.
+3. **Bundle the public LAP pairing certificate and key?** Every LEAP client
+   ships them (pylutron-caseta, so Home Assistant; lutron-leap, so
+   Homebridge). Plan: copy them from pylutron-caseta's `assets.py`
+   (Apache-2.0) with a `NOTICE` attribution. No alternative exists to pair.
+4. **Where to keep the pairing credentials?** Proposed: hidden config keys
+   (`setConfig` outside `config_schema`), because `/data` is not in the
+   Gladys backups and losing it means pairing again. To check in milestone 3:
+   that hidden keys are never sent to the front end; otherwise `/data`
+   (mode 0600).
+5. **One bridge in v1?** Proposed: yes (one Caséta bridge, or one RA3/QSX
+   project). Several bridges in milestone 8 only if someone asks.
+6. **Default button mode**: `normal` (click, double click and long press
+   detected in software; a single click is reported about 300 ms late) or
+   `instant` (click on press, no latency, no double/long)? Proposed:
+   `normal`, as Homebridge.
+
+## Decisions proposed (to confirm with the open questions)
+
+| Topic         | Decision                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Targets       | Gladys `>=5.1.1` (widgets and scene triggers need 5.1; 5.1.0 had an update bug). SDK `@gladysassistant/integration-sdk` `^0.14.0`. Caséta standard and PRO, RA2 Select first; RA3 and QSX in milestone 7. The original non-LEAP Smart Bridge (L-BDG) is out.                                                                                                                    |
+| Protocol      | LEAP only (TLS 8081, pairing 8083). No telnet / LIP.                                                                                                                                                                                                                                                                                                                            |
+| Library       | **In-house LEAP client, zero runtime dependency** besides the SDK, ported from pylutron-caseta (Apache-2.0, attribution in `NOTICE`). `lutron-leap` is GPL-3.0 and has the defects listed in AUDIT.md §2: reference only, never imported or copied.                                                                                                                             |
+| Layering      | `src/leap/` never imports the Gladys SDK nor `src/gladys/` (ESLint rule, as in gladys-frigate); `src/gladys/` is a thin adapter; `index.js` only wires.                                                                                                                                                                                                                         |
+| TLS           | Bridge certificate verified against the CA received at pairing (`lutron-root` for RA3/QSX), `minVersion: TLSv1.2`, no host-name check (the bridge certificate has none), IPv4. A refused certificate is an explicit status, never a silent retry loop.                                                                                                                          |
+| Discovery     | Manifest `network_discovery: [{ "type": "mdns", "service": "_lutron._tcp" }]`; `scanNetwork('mdns')` when pairing without a host, and to find the bridge again when its IP changes (matched by serial number). Manual IP always possible.                                                                                                                                       |
+| Connection    | Ping `/server/1/status/ping` every 60 s, 10 s timeout, socket destroyed on failure; reconnection backoff 2 s → 60 s; **full reload and re-subscription after every reconnection**; zone states re-read every 15 min against the silent stale subscription (HA #128541); configuration load timeout 60 s; request timeout 4 s (Gladys acknowledgement: 5 s).                     |
+| Identifiers   | `externalIds(type, platformId)` with the Lutron serial number; zones without their own serial: `<bridge serial>-zone-<id>`; scenes: `<bridge serial>-scene-<id>`. Frozen once released.                                                                                                                                                                                         |
+| Buttons       | One Gladys device per Pico or keypad, one `button`/`click` feature per physical button, named per model (On, Off, Raise, Lower, Favorite, Button 1…). Values `BUTTON_STATUS`: `CLICK`, `DOUBLE_CLICK`, `LONG_CLICK_PRESS`, `LONG_CLICK_RELEASE`, declared in `supported_options`. Always `publishState` (never a deduplicating publisher): two identical clicks are two events. |
+| No duplicates | No custom scene trigger for button presses, occupancy, battery or Smart Away: they are features, and the core "device state" trigger already covers them. No custom scene action for on/off, level, position, scene activation: the core "control a device" action covers them.                                                                                                 |
+| Fade          | Config `default_fade_seconds` (0 = the device's own fade) for every level command; scene action `set_level_with_fade` for a per-scene fade.                                                                                                                                                                                                                                     |
+| Tilt          | Tilt-only blinds (Serena wood): the `position` feature drives the tilt. Shades with lift and tilt: `position` = lift, tilt through the scene action `set_tilt` (Gladys has no tilt feature type).                                                                                                                                                                               |
+| Fan           | `fan`/`percent`, step 25: 0 Off, 25 Low, 50 Medium, 75 MediumHigh, 100 High (`FAN_MODE` has no MediumHigh).                                                                                                                                                                                                                                                                     |
+| Rate limits   | States batched (≤ 100 per call) and kept under 250/min; a full resync is spread when the project is large. Scene events ≤ 300/min, never fired in reaction to our own command.                                                                                                                                                                                                  |
+| Out of v1     | Several bridges (milestone 8 if requested), occupancy sensor settings (set on the sensor), Pico battery (not in LEAP), telnet LIP, Matter, firmware updates, timeclocks.                                                                                                                                                                                                        |
+
+## Milestone 1 — scaffold, manifest, store validation, CI
+
+Copy the proven setup of gladys-frigate / gladys-ecoflow, adapted:
+
+- [ ] `package.json` (ESM, `node --test`, `engines` `>=20.18.1`), runtime
+      dependency: the SDK only. Dev: `eslint`, `@eslint/js`, `globals`,
+      `eslint-config-prettier`, `prettier`.
+- [ ] `eslint.config.js` with the layering rule on `src/leap/`, `no-console`,
+      `eqeqeq`; `.prettierrc.json` (width 100, single quotes).
+- [ ] `Dockerfile` (`node:24-alpine` pinned by digest, `dumb-init`,
+      `npm ci --omit=dev`, `USER node`, `/data`), `.dockerignore`.
+- [ ] CI: `ci.yml` (format, lint, tests,
+      `npm audit --omit=dev --audit-level=high`, store validator with
+      `--skip-image-check`, Docker build), `build.yml` / `release.yml`
+      (multi-arch amd64 + arm64 to GHCR),
+      `dependabot.yml` (npm, docker, github-actions); actions pinned by SHA.
+- [ ] `gladys-assistant-integration.json`: `type: device`, `name: Lutron`,
+      `categories: ["lighting"]`, `transports: ["local"]`,
+      `gladys_version: ">=5.1.1"`, `network_discovery` mDNS, the config
+      schema, actions, triggers, actions and widget below (keys only for the
+      later ones, implemented as they come, or added milestone by milestone
+      if the store refuses handlers that do not exist yet).
+- [ ] `src/gladys/keys.js`: frozen keys, pinned by `test/manifest.test.js`.
+- [ ] `docs/en.md`, `docs/fr.md` (≥ 300 characters), `cover.png` 800×534
+      ≤ 150 KB, `LICENSE` (Apache-2.0), `NOTICE` (pylutron-caseta),
+      `CHANGELOG.md`, README.
+- [ ] `npm run validate:manifest` green (the image error is expected before
+      the first release).
+
+### Manifest draft
+
+Configuration (`config_schema`):
+
+| Key                    | Type    | Notes                                                                                                                                       |
+| ---------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bridge_section`       | section | Steps: leave the IP empty to search the network, press "Pair the bridge", then the small black button at the back of the bridge within 60 s |
+| `bridge_host`          | string  | Optional IPv4; filled in by the pairing when the bridge is found by mDNS                                                                    |
+| `options_section`      | section |                                                                                                                                             |
+| `default_fade_seconds` | number  | 0–60, default 0 (the device's fade)                                                                                                         |
+| `button_detection`     | select  | `instant` / `normal` / `relaxed`, default `normal` (question 6)                                                                             |
+
+Hidden keys (written by the integration, question 4): `leap_key`,
+`leap_cert`, `leap_ca`, `bridge_serial`, `bridge_type`.
+
+Configuration actions: `pair_bridge` (timeout 120 s), `test_connection`,
+`refresh_devices` (reload the Lutron project, refresh the Discover tab),
+`forget_bridge` (delete the credentials), `diagnostics` (sanitized model
+dump in the logs, used for fixtures and support).
+
+Scene triggers: `bridge_offline`, `bridge_online` (variables: `reason`,
+`offline_seconds`); `area_scene_activated` in milestone 7 (fields `area`,
+`scene`; RA3/QSX only).
+
+Scene actions: `set_level_with_fade` (device, level 0–100, fade seconds),
+`set_tilt` (device, tilt 0–100); `press_keypad_button` in milestone 7
+(device, button).
+
+Widget: `lutron_overview` (see milestone 6).
+
+## Milestone 2 — LEAP client (`src/leap/`, no Gladys import)
+
+- [ ] `connection.js`: `tls.connect` with the stored credentials, line
+      framing with `StringDecoder` (UTF-8 split across chunks), buffer cap
+      (4 MB, big RA3 projects), `ClientTag` correlation with timeout and
+      cleanup, `204 NoContent` = empty body, untagged messages dispatched as
+      unsolicited events, typed errors (`LeapTimeoutError`,
+      `LeapStatusError`, `CertificateRefusedError`, `BridgeUnreachableError`).
+- [ ] `session.js`: ping watchdog (60 s / 10 s), backoff 2 s → 60 s,
+      `onReady` hook that reloads the model and subscribes again on every
+      connection, close on a failed reload (pylutron #206), `close()` that
+      clears every timer.
+- [ ] Paging header support when a response is paged (big projects).
+- [ ] Tests: a fake LEAP TLS server (test CA + certificates in
+      `test/fixtures/tls/`), replies split in arbitrary chunks, accented
+      names, timeouts, half-open socket (no ping answer), bridge restart,
+      subscriptions restored after reconnection.
+
+## Milestone 3 — pairing, discovery, configuration UX
+
+- [ ] `src/leap/csr.js`: RSA-2048 key + PKCS#10 SHA-256 CSR with
+      `node:crypto` only (proof of concept already checked with OpenSSL).
+- [ ] `src/leap/pairing.js`: port 8083 with the LAP certificates, wait for
+      the `PhysicalAccess` message (button pressed), `/pair` CSR request,
+      `SigningResult`, CA choice (Caséta root vs `lutron-root`), check by a
+      ping on 8081. Line framing shared with the client.
+- [ ] `src/leap/assets.js`: LAP CA, certificate and key, `lutron-root` CA
+      (from pylutron-caseta, attribution in `NOTICE`).
+- [ ] `src/gladys/discovery.js` (bridges): `scanNetwork('mdns')`, parse
+      `SYSTYPE` (smartbridge, ra2select, radiora3, hwqs) and the serial from
+      the host name; one bridge → used; several → the action lists them and
+      asks for the IP; none → explain (Docker host, VLAN, manual IP).
+- [ ] `src/gladys/status.js`: `setConnectionStatus` in English and French
+      saying **what** is wrong: not paired, button not pressed in time,
+      bridge unreachable at <ip>, certificate refused (bridge reset? pair
+      again), connected to "Caséta Smart Bridge PRO, LEAP x.y, n devices".
+- [ ] Actions `pair_bridge`, `test_connection`, `forget_bridge`; the
+      credentials stored (question 4); the bridge found again by serial
+      number when its IP changes.
+- [ ] Tests: fake pairing server (button pressed, timeout, 401), CSR
+      verified by `crypto.X509Certificate`, discovery parsing.
+
+## Milestone 4 — Caséta / RA2 Select model, devices, states, commands
+
+- [ ] `src/leap/model.js`: `/project`, `/area`, `/device`, `/button`,
+      `/virtualbutton`, `/occupancygroup`, zone statuses, the bridge device,
+      Smart Away, shade battery; normalized model (areas, zones with type,
+      button groups, occupancy groups, scenes). Unknown types logged once and
+      skipped, never fatal.
+- [ ] `src/leap/deviceTypes.js`: Lutron device type → kind (dimmer, switch,
+      shade, tilt blind, open/close/stop cover, fan, CCO, Pico, keypad,
+      sensor), from pylutron-caseta's lists.
+- [ ] `src/gladys/devices.js`: Discover tab. Device name "<Area> <Name>"
+      (the Lutron area as a hint for the Gladys room). Features: see
+      AUDIT.md §5 table. Bridge device: Smart Away switch.
+- [ ] `src/gladys/states.js`: zone status → states (dimmer level → binary +
+      brightness; shade level → position; fan speed → percent; switched
+      level → binary; occupancy → presence; battery → battery-low), batched,
+      deduplicated except buttons, only for created devices.
+- [ ] `src/gladys/commands.js`: `onSetValue` → LEAP command, answer within
+      5 s, last non-zero level remembered for "on", optimistic position for
+      `Raise` / `Lower` (no immediate status), scene `push` →
+      `PressAndRelease`.
+- [ ] Transport badges (`local` / `unreachable`), zone states re-read
+      every 15 min and after every reconnection.
+- [ ] Action `diagnostics` (sanitized: no certificate, key or serial in
+      clear), and `refresh_devices`.
+- [ ] Fixtures: anonymized dump of the maintainer's bridge (question 2),
+      plus the response files of pylutron-caseta's tests (Apache-2.0) for
+      the device types we do not own.
+
+## Milestone 5 — Pico remotes and buttons
+
+- [ ] `src/leap/picoModels.js`: button numbers → names per model (Pico 2B,
+      2B raise/lower, 3B, 3B raise/lower, 4B, 4B scene, 4B zone, 4B 2-group,
+      shade 4-group remote, paddle Pico), generic "Button n" for unknown
+      ones (never fatal, HA #184579).
+- [ ] `src/leap/buttonTracker.js`, per button, pure and tested with fake
+      timers:
+  - `Press` → arm the long-press timer (350 ms normal, 750 ms relaxed,
+    +250 ms on raise/lower buttons);
+  - long-press timer fires → `LONG_CLICK_PRESS`; next `Release` →
+    `LONG_CLICK_RELEASE`;
+  - `Release` before it → a second release within the double-click window
+    (300 ms normal, 450 ms relaxed) → `DOUBLE_CLICK`, otherwise `CLICK`
+    when the window ends;
+  - native `MultiTap` → `DOUBLE_CLICK`, native `LongHold` →
+    `LONG_CLICK_PRESS`, without waiting;
+  - `instant` mode: `CLICK` on `Press`, nothing else.
+- [ ] Subscription per button (`/button/{id}/status/event`) restored after
+      every reconnection; button events ignored while the model reloads.
+- [ ] Docs: one example scene per press type with the core "device state"
+      trigger; why the raise/lower long press is delayed.
+
+## Milestone 6 — scene actions, triggers, widget → release 0.1.0
+
+- [ ] Scene actions `set_level_with_fade` and `set_tilt` (refused with a
+      clear message on a device that cannot do it).
+- [ ] Scene triggers `bridge_offline` / `bridge_online`: one event per
+      transition, after the reconnection attempts of the first 2 minutes
+      (no flapping), never during the start-up.
+- [ ] Widget `lutron_overview` (≤ 8 components, answered within 15 s even
+      when the bridge is down):
+  - caption: bridge model, connection, LEAP version;
+  - status list: connection, Smart Away, devices, occupied areas, shades
+    with a low battery;
+  - card list: the last button presses (remote, button, press type, time),
+    which no core box shows;
+  - buttons: Smart Away on/off (bound to the bridge feature), "Reconnect"
+    while offline.
+- [ ] Widget rejected on purpose: per-area light or shade controls (the
+      core room box already does it).
+- [ ] Docs `en`/`fr` complete (pairing, discovery, Docker networks, button
+      modes, examples, pitfalls of AUDIT.md §6), CHANGELOG, release 0.1.0,
+      repository topic `gladys-assistant-integration`.
+
+## Milestone 7 — RadioRA 3 / HomeWorks QSX → release 0.2.0
+
+- [ ] Model per area: control stations, keypads (`buttongroup/expanded`,
+      engravings as button names), zones (`associatedzone`, `ControlType`),
+      area scenes (`areascene` → presets), occupancy through `/area/status`,
+      processor through `IsThisDevice`; `/project` `ProductType` picks the
+      path; `204` on `/device` handled (QSX).
+- [ ] Keypad LEDs as `switch`/`binary` (+ the LED auto-off gotcha in the
+      docs); area scenes as `button`/`push`; scene action
+      `press_keypad_button`; scene trigger `area_scene_activated`
+      (`CurrentScene` of `/area/status`).
+- [ ] Tunable white (`light`/`temperature` in kelvin), colour
+      (`light`/`color` ↔ HSV), warm dim (also Caséta Lumaris tape light).
+- [ ] Native `MultiTap` / `LongHold` checked (QSX sends `LongHold`; openHAB
+      says RA3 sends them when programmed in Designer).
+- [ ] Testers wanted on the forum (no hardware here, question 2).
+
+## Milestone 8 — hardening
+
+- [ ] Long-run test against a fake bridge (memory, timers, reconnections).
+- [ ] Several bridges if requested (question 5).
+- [ ] Option to hide device types; forum announcement in the thread of
+      [topic 10385](https://community.gladysassistant.com/t/10385),
+      explaining why `lutron-leap` was not used.
