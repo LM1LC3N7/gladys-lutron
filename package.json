@@ -1,0 +1,31 @@
+{
+  "name": "gladys-lutron",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lutron integration for Gladys Assistant over the local LEAP protocol: Caséta, RA2 Select, RadioRA 3 and HomeWorks QSX.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test test/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=85 --test-coverage-branches=80 --test-coverage-functions=85 test/*.test.js",
+    "validate:manifest": "npx --yes github:GladysAssistant/integration-store ."
+  },
+  "engines": {
+    "node": ">=20.18.1"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@gladysassistant/integration-sdk": "^0.14.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9"
+  }
+}

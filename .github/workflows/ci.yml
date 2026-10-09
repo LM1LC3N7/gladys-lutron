@@ -1,0 +1,95 @@
+# -----------------------------------------------------------------------------
+# Continuous integration: runs on every push to main and every pull request.
+#
+# Gates:
+#   1. Prettier  -> consistent formatting;
+#   2. ESLint    -> real mistakes + the layering rule (src/leap/ stays
+#                   independent from Gladys);
+#   3. Tests     -> `node --test` with coverage thresholds, on Node 22 and 24;
+#   4. Audit     -> no known high or critical vulnerability in the runtime
+#                   dependencies shipped in the image;
+#   5. Manifest  -> the official Gladys store validator (image check skipped:
+#                   the image only exists once released);
+#   6. Docker    -> the image still builds (amd64 only, nothing is pushed).
+#
+# Actions are pinned by commit SHA (a moved tag cannot change what runs);
+# Dependabot proposes the updates (.github/dependabot.yml).
+#
+# If EVERY job fails in under 2 seconds, the Actions quota is exhausted: it is
+# not a code problem.
+# -----------------------------------------------------------------------------
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# Read-only token: CI only checks out and builds, it never writes.
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    name: Lint & test (Node ${{ matrix.node-version }})
+    strategy:
+      matrix:
+        node-version: [22, 24]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting (Prettier)
+        run: npm run format:check
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Run tests with coverage thresholds
+        run: npm run test:coverage
+
+      - name: Audit the runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  manifest:
+    runs-on: ubuntu-latest
+    name: Gladys store validation
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+
+      - name: Validate the manifest like the store indexer does
+        run: npx --yes github:GladysAssistant/integration-store . --skip-image-check
+
+  docker:
+    runs-on: ubuntu-latest
+    name: Docker build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Build the image (not pushed)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false

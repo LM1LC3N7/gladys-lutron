@@ -5,7 +5,7 @@ control Lutron lighting, shades and fans and to use Pico remotes in Gladys
 scenes, **fully locally** over Lutron's LEAP protocol: Caséta (Smart Hub and
 Smart Bridge PRO), RA2 Select, and later RadioRA 3 and HomeWorks QSX.
 
-> **Status: design.** No code yet. The audit of existing libraries and
+> **Status: in development** (milestone 1 of 8: scaffold and manifest). The audit of existing libraries and
 > integrations is in [AUDIT.md](./AUDIT.md), the implementation plan in
 > [TODO.md](./TODO.md).
 

@@ -20,8 +20,8 @@ The research behind every choice is in [AUDIT.md](./AUDIT.md).
 ## Status
 
 - [x] **Milestone 0 — audit and plan** (this file, [AUDIT.md](./AUDIT.md))
-- [ ] Answers to the open questions below
-- [ ] **Milestone 1 — scaffold, manifest, store validation, CI**
+- [x] Answers to the open questions (2026-10-09, see "Answers" below)
+- [x] **Milestone 1 — scaffold, manifest, store validation, CI**
 - [ ] **Milestone 2 — LEAP client: connection, framing, watchdog**
 - [ ] **Milestone 3 — pairing, discovery, configuration UX**
 - [ ] **Milestone 4 — Caséta / RA2 Select model, devices, states, commands**
@@ -32,36 +32,32 @@ The research behind every choice is in [AUDIT.md](./AUDIT.md).
       release 0.2.0**
 - [ ] **Milestone 8 — hardening, diagnostics, forum announcement**
 
-## Open questions (blocking milestone 1)
+## Answers of the maintainer (2026-10-09)
 
-1. **Rename the repository to `gladys-lutron`?** Recommended, and only
-   possible before the first install: the repository name ends up in the
-   prefix of every device identifier (AUDIT.md §7). The maintainer renames
-   it in the GitHub settings; the code then uses
-   `ghcr.io/lm1lc3n7/gladys-lutron`.
-2. **Hardware available for testing?** Bridge model (L-BDG2 standard, L-BDGPRO2
-   PRO, RA2 Select, RA3, QSX), and the devices: dimmers, switches, Pico
-   models, shades (roller, Serena wood blinds), fan, occupancy sensors. The
-   fixtures of milestone 4 come from a real dump (diagnostics action,
-   anonymized). Without RA3/QSX hardware, milestone 7 ships "untested" and
-   asks for testers on the forum.
-3. **Bundle the public LAP pairing certificate and key?** Every LEAP client
-   ships them (pylutron-caseta, so Home Assistant; lutron-leap, so
-   Homebridge). Plan: copy them from pylutron-caseta's `assets.py`
-   (Apache-2.0) with a `NOTICE` attribution. No alternative exists to pair.
-4. **Where to keep the pairing credentials?** Proposed: hidden config keys
-   (`setConfig` outside `config_schema`), because `/data` is not in the
-   Gladys backups and losing it means pairing again. To check in milestone 3:
-   that hidden keys are never sent to the front end; otherwise `/data`
-   (mode 0600).
-5. **One bridge in v1?** Proposed: yes (one Caséta bridge, or one RA3/QSX
-   project). Several bridges in milestone 8 only if someone asks.
-6. **Default button mode**: `normal` (click, double click and long press
-   detected in software; a single click is reported about 300 ms late) or
-   `instant` (click on press, no latency, no double/long)? Proposed:
-   `normal`, as Homebridge.
+1. **Repository renamed** to `LM1LC3N7/gladys-lutron`, default branch `main`.
+   Image: `ghcr.io/lm1lc3n7/gladys-lutron`.
+2. **Hardware**: Caséta Diva starter kit DVRF-BDG-1D-C (Caséta Smart Hub,
+   Diva smart dimmer, Pico remote, Canadian version) and a second Diva smart
+   dimmer (DVRF-6L). **Priority on this hardware**, without leaving aside the
+   other Lutron devices common in Home Assistant setups (shades, fans,
+   switches, other Picos, occupancy sensors, RA3/QSX later). Legacy systems
+   (telnet LIP, the original non-LEAP Smart Bridge) are out for now.
+3. **Everything local**, from the configuration to the pairing and the daily
+   use: no Lutron account, no cloud, no Internet needed by the integration.
+   The public LAP pairing certificate and key are therefore bundled (copied
+   from pylutron-caseta, Apache-2.0, credited in `NOTICE`): pairing is
+   impossible without them. Only adding devices to the bridge needs the
+   Lutron app (Lutron's own setup, outside Gladys); documented.
+4. **Pairing credentials in hidden config keys**: confirmed by the spec
+   (`host-api-endpoints.md`, `POST /config`: "keys outside the schema are the
+   integration's free internal storage, never displayed in the UI"), stored
+   in the Gladys database, so in its backups. `/data` holds nothing.
+5. **One bridge in v1** (proposal kept).
+6. **Button mode configurable** in the form (`button_detection`: Instant /
+   Normal / Slow, default Normal), each mode explained in the field
+   description in English and French.
 
-## Decisions proposed (to confirm with the open questions)
+## Decisions
 
 | Topic         | Decision                                                                                                                                                                                                                                                                                                                                                                        |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -81,36 +77,31 @@ The research behind every choice is in [AUDIT.md](./AUDIT.md).
 | Rate limits   | States batched (≤ 100 per call) and kept under 250/min; a full resync is spread when the project is large. Scene events ≤ 300/min, never fired in reaction to our own command.                                                                                                                                                                                                  |
 | Out of v1     | Several bridges (milestone 8 if requested), occupancy sensor settings (set on the sensor), Pico battery (not in LEAP), telnet LIP, Matter, firmware updates, timeclocks.                                                                                                                                                                                                        |
 
-## Milestone 1 — scaffold, manifest, store validation, CI
+## Milestone 1 — scaffold, manifest, store validation, CI (done)
 
-Copy the proven setup of gladys-frigate / gladys-ecoflow, adapted:
+Done as planned, from the gladys-frigate / gladys-ecoflow setup:
+`package.json` (runtime dependency: the SDK only), ESLint with the layering
+rule on `src/leap/`, Prettier, `Dockerfile` (`node:24-alpine`, `dumb-init`,
+`USER node`, `/data`), CI (`ci.yml`: format, lint, tests with coverage on
+Node 22 and 24, runtime audit, store validator with `--skip-image-check`,
+Docker build; `build.yml` / `release.yml` for the multi-arch GHCR image;
+Dependabot for npm, Docker and Actions), the complete v1 manifest, frozen
+keys (`src/gladys/keys.js`, pinned by `test/manifest.test.js`),
+`src/config.js`, `docs/en.md` / `docs/fr.md`, `cover.png`, `LICENSE`,
+`NOTICE`, `CHANGELOG.md`. `index.js` answers every declared surface with
+"not available yet" until its milestone lands.
 
-- [ ] `package.json` (ESM, `node --test`, `engines` `>=20.18.1`), runtime
-      dependency: the SDK only. Dev: `eslint`, `@eslint/js`, `globals`,
-      `eslint-config-prettier`, `prettier`.
-- [ ] `eslint.config.js` with the layering rule on `src/leap/`, `no-console`,
-      `eqeqeq`; `.prettierrc.json` (width 100, single quotes).
-- [ ] `Dockerfile` (`node:24-alpine` pinned by digest, `dumb-init`,
-      `npm ci --omit=dev`, `USER node`, `/data`), `.dockerignore`.
-- [ ] CI: `ci.yml` (format, lint, tests,
-      `npm audit --omit=dev --audit-level=high`, store validator with
-      `--skip-image-check`, Docker build), `build.yml` / `release.yml`
-      (multi-arch amd64 + arm64 to GHCR),
-      `dependabot.yml` (npm, docker, github-actions); actions pinned by SHA.
-- [ ] `gladys-assistant-integration.json`: `type: device`, `name: Lutron`,
-      `categories: ["lighting"]`, `transports: ["local"]`,
-      `gladys_version: ">=5.1.1"`, `network_discovery` mDNS, the config
-      schema, actions, triggers, actions and widget below (keys only for the
-      later ones, implemented as they come, or added milestone by milestone
-      if the store refuses handlers that do not exist yet).
-- [ ] `src/gladys/keys.js`: frozen keys, pinned by `test/manifest.test.js`.
-- [ ] `docs/en.md`, `docs/fr.md` (≥ 300 characters), `cover.png` 800×534
-      ≤ 150 KB, `LICENSE` (Apache-2.0), `NOTICE` (pylutron-caseta),
-      `CHANGELOG.md`, README.
-- [ ] `npm run validate:manifest` green (the image error is expected before
-      the first release).
+Notes:
 
-### Manifest draft
+- `npx github:GladysAssistant/integration-store` could not install in the
+  development container (an `@aws-sdk` version missing from its npm mirror);
+  the same validator run from a clone of the store
+  (`node src/validate-cli.js <dir> --skip-image-check`) passes: only the
+  expected warnings (image not published, cover not on `main` yet).
+- The base image is not pinned by digest yet: Dependabot's docker ecosystem
+  proposes the updates.
+
+### Manifest (published in milestone 1)
 
 Configuration (`config_schema`):
 

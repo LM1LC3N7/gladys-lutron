@@ -1,0 +1,336 @@
+{
+  "manifest_version": 1,
+  "type": "device",
+  "name": "Lutron",
+  "description": {
+    "en": "Lutron Caséta and RA2 Select, 100% local (LEAP): lights, shades, fans, Pico remotes.",
+    "fr": "Lutron Caséta et RA2 Select, 100 % local (LEAP) : lumières, stores, ventilateurs, Pico."
+  },
+  "version": "0.0.0",
+  "docker_image": "ghcr.io/lm1lc3n7/gladys-lutron:0.0.0",
+  "gladys_version": ">=5.1.1",
+  "cover_image": "https://raw.githubusercontent.com/LM1LC3N7/gladys-lutron/main/cover.png",
+  "categories": ["lighting"],
+  "transports": ["local"],
+  "network_discovery": [
+    {
+      "type": "mdns",
+      "service": "_lutron._tcp"
+    }
+  ],
+  "config_schema": [
+    {
+      "key": "bridge_section",
+      "type": "section",
+      "label": {
+        "en": "Lutron bridge",
+        "fr": "Bridge Lutron"
+      },
+      "description": {
+        "en": "Everything stays on your local network: no Lutron account, no cloud, no Internet needed. 1. Leave the IP address empty to search the network, or type it (a fixed IP is best). 2. Press \"Pair the bridge\" below. 3. Within 60 seconds, press the small black button at the back of the bridge. Your devices must already be added to the bridge.",
+        "fr": "Tout reste sur votre réseau local : aucun compte Lutron, aucun cloud, aucun accès Internet nécessaire. 1. Laissez l'adresse IP vide pour chercher sur le réseau, ou saisissez-la (une IP fixe est préférable). 2. Cliquez sur « Associer le bridge » ci-dessous. 3. Dans les 60 secondes, appuyez sur le petit bouton noir au dos du bridge. Vos appareils doivent déjà être ajoutés au bridge."
+      },
+      "links": [
+        {
+          "url": "https://github.com/LM1LC3N7/gladys-lutron/blob/main/docs/en.md",
+          "label": {
+            "en": "Setup guide",
+            "fr": "Guide d'installation"
+          }
+        }
+      ]
+    },
+    {
+      "key": "bridge_host",
+      "type": "string",
+      "label": {
+        "en": "Bridge IP address (optional)",
+        "fr": "Adresse IP du bridge (facultative)"
+      },
+      "description": {
+        "en": "Empty: the bridge is searched on the network when pairing, then its address is saved here.",
+        "fr": "Vide : le bridge est cherché sur le réseau lors de l'association, puis son adresse est enregistrée ici."
+      },
+      "placeholder": {
+        "en": "192.168.1.20",
+        "fr": "192.168.1.20"
+      }
+    },
+    {
+      "key": "options_section",
+      "type": "section",
+      "label": {
+        "en": "Options",
+        "fr": "Options"
+      }
+    },
+    {
+      "key": "button_detection",
+      "type": "select",
+      "label": {
+        "en": "Pico remote buttons",
+        "fr": "Boutons des télécommandes Pico"
+      },
+      "description": {
+        "en": "Instant: a click is reported as soon as the button is pressed, with no delay, but double clicks and long presses are not detected. Normal: click, double click and long press are detected; a single click is reported about 0.3 s later (time to make sure no second press follows). Slow: same as Normal with wider windows (0.45 s for a double click, 0.75 s for a long press), for people who press slowly.",
+        "fr": "Instantané : un clic est signalé dès l'appui, sans aucun délai, mais les doubles clics et appuis longs ne sont pas détectés. Normal : clic, double clic et appui long sont détectés ; un clic simple est signalé environ 0,3 s plus tard (le temps de vérifier qu'aucun second appui ne suit). Lent : comme Normal avec des délais plus larges (0,45 s pour un double clic, 0,75 s pour un appui long), pour ceux qui appuient lentement."
+      },
+      "display": "radio",
+      "options": [
+        {
+          "value": "instant",
+          "label": {
+            "en": "Instant (click only)",
+            "fr": "Instantané (clic seul)"
+          }
+        },
+        {
+          "value": "normal",
+          "label": {
+            "en": "Normal (click, double click, long press)",
+            "fr": "Normal (clic, double clic, appui long)"
+          }
+        },
+        {
+          "value": "relaxed",
+          "label": {
+            "en": "Slow (wider timings)",
+            "fr": "Lent (délais plus larges)"
+          }
+        }
+      ],
+      "default": "normal"
+    },
+    {
+      "key": "default_fade_seconds",
+      "type": "number",
+      "label": {
+        "en": "Default fade time (s)",
+        "fr": "Durée de fondu par défaut (s)"
+      },
+      "description": {
+        "en": "Time a dimmer takes to reach a new level when Gladys changes it. 0 keeps the device's own fade.",
+        "fr": "Temps que met un variateur pour atteindre un nouveau niveau quand Gladys le change. 0 garde le fondu propre à l'appareil."
+      },
+      "default": 0,
+      "min": 0,
+      "max": 60
+    }
+  ],
+  "actions": [
+    {
+      "key": "pair_bridge",
+      "label": {
+        "en": "Pair the bridge",
+        "fr": "Associer le bridge"
+      },
+      "description": {
+        "en": "Then press the small black button at the back of the bridge within 60 seconds.",
+        "fr": "Puis appuyez sur le petit bouton noir au dos du bridge dans les 60 secondes."
+      },
+      "timeout_seconds": 120
+    },
+    {
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion"
+      },
+      "timeout_seconds": 30
+    },
+    {
+      "key": "refresh_devices",
+      "label": {
+        "en": "Refresh the devices",
+        "fr": "Rafraîchir les appareils"
+      },
+      "description": {
+        "en": "Reads the bridge again after adding or renaming devices in the Lutron app.",
+        "fr": "Relit le bridge après l'ajout ou le renommage d'appareils dans l'application Lutron."
+      },
+      "timeout_seconds": 90
+    },
+    {
+      "key": "forget_bridge",
+      "label": {
+        "en": "Forget the bridge",
+        "fr": "Oublier le bridge"
+      },
+      "description": {
+        "en": "Deletes the pairing. The bridge will have to be paired again.",
+        "fr": "Supprime l'association. Le bridge devra être associé à nouveau."
+      },
+      "timeout_seconds": 30
+    },
+    {
+      "key": "diagnostics",
+      "label": {
+        "en": "Diagnostics",
+        "fr": "Diagnostic"
+      },
+      "description": {
+        "en": "Writes an anonymized description of the Lutron system to the logs, to report a problem.",
+        "fr": "Écrit une description anonymisée du système Lutron dans les journaux, pour signaler un problème."
+      },
+      "timeout_seconds": 90
+    }
+  ],
+  "widgets": [
+    {
+      "key": "lutron_overview",
+      "label": {
+        "en": "Lutron overview",
+        "fr": "Aperçu Lutron"
+      },
+      "description": {
+        "en": "Bridge status, Smart Away, occupied rooms, low batteries and the last remote presses.",
+        "fr": "État du bridge, Smart Away, pièces occupées, piles faibles et derniers appuis."
+      },
+      "icon": "sun",
+      "action_timeout_seconds": 30
+    }
+  ],
+  "scene_triggers": [
+    {
+      "key": "bridge_offline",
+      "label": {
+        "en": "Lutron: bridge offline",
+        "fr": "Lutron : bridge hors ligne"
+      },
+      "description": {
+        "en": "The bridge stopped answering for more than 2 minutes (power cut, network, reset).",
+        "fr": "Le bridge ne répond plus depuis plus de 2 minutes (coupure, réseau, réinitialisation)."
+      },
+      "variables": [
+        {
+          "key": "bridge_name",
+          "type": "string",
+          "label": {
+            "en": "Bridge",
+            "fr": "Bridge"
+          }
+        },
+        {
+          "key": "reason",
+          "type": "string",
+          "label": {
+            "en": "Reason",
+            "fr": "Raison"
+          }
+        }
+      ]
+    },
+    {
+      "key": "bridge_online",
+      "label": {
+        "en": "Lutron: bridge back online",
+        "fr": "Lutron : bridge de retour en ligne"
+      },
+      "description": {
+        "en": "The bridge answers again after being reported offline.",
+        "fr": "Le bridge répond à nouveau après avoir été signalé hors ligne."
+      },
+      "variables": [
+        {
+          "key": "bridge_name",
+          "type": "string",
+          "label": {
+            "en": "Bridge",
+            "fr": "Bridge"
+          }
+        },
+        {
+          "key": "offline_seconds",
+          "type": "number",
+          "label": {
+            "en": "Offline duration (s)",
+            "fr": "Durée hors ligne (s)"
+          }
+        }
+      ]
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "set_level_with_fade",
+      "label": {
+        "en": "Lutron: set a level with a fade",
+        "fr": "Lutron : régler un niveau avec fondu"
+      },
+      "description": {
+        "en": "Brings a dimmer to a level over the given time (sunrise, cinema…). 0 turns it off.",
+        "fr": "Amène un variateur à un niveau en un temps donné (réveil, cinéma…). 0 l'éteint."
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "required": true,
+          "label": {
+            "en": "Dimmer",
+            "fr": "Variateur"
+          }
+        },
+        {
+          "key": "level",
+          "type": "number",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "label": {
+            "en": "Level (%)",
+            "fr": "Niveau (%)"
+          }
+        },
+        {
+          "key": "fade_seconds",
+          "type": "number",
+          "default": 2,
+          "min": 0,
+          "max": 14400,
+          "label": {
+            "en": "Fade time (s)",
+            "fr": "Durée du fondu (s)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "set_tilt",
+      "label": {
+        "en": "Lutron: tilt the slats",
+        "fr": "Lutron : orienter les lames"
+      },
+      "description": {
+        "en": "Tilts the slats of a blind that has both lift and tilt (Gladys has no tilt control).",
+        "fr": "Oriente les lames d'un store qui a montée et inclinaison (Gladys n'a pas de réglage d'inclinaison)."
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "required": true,
+          "label": {
+            "en": "Blind",
+            "fr": "Store"
+          }
+        },
+        {
+          "key": "tilt",
+          "type": "number",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "label": {
+            "en": "Tilt (%)",
+            "fr": "Inclinaison (%)"
+          }
+        }
+      ]
+    }
+  ]
+}
