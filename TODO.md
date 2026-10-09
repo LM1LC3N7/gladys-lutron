@@ -205,6 +205,24 @@ To check on the maintainer's hardware (Caséta Smart Hub, Diva, Pico):
 - [ ] What a bridge does with a certificate it no longer knows (reset
       bridge): TLS alert or silent close (see milestone 2 findings).
 
+## Diagnostics action (done, ahead of milestone 4, at the maintainer's request)
+
+- `src/leap/anonymize.js`: serial numbers → stable pseudonyms
+  (`serial-1`…), MAC / IP / bridge host names / positions masked,
+  credential-like keys redacted; LEAP durations (`00:00:02`) untouched.
+- `src/leap/diagnostics.js`: read-only crawl (≤ 300 requests, ≤ 70 s):
+  Caséta / RA2 Select (`/project`, `/area`, `/device`, `/button`,
+  `/buttongroup`, `/zone`, `/virtualbutton`, `/occupancygroup` + status,
+  Smart Away, every zone status, battery of shades and sensors) or RA3 /
+  QSX (zones and area status, per area control stations, zones and scenes,
+  button groups of keypads and Picos); each endpoint's outcome recorded
+  (`ok`, `status`, `timeout`, `error`); log lines between
+  `LUTRON DIAGNOSTICS BEGIN` / `END`, one per collection item.
+- `bridgeController.diagnostics()`: header (versions, pairing, session
+  state, bridge info anonymized), works offline (state only).
+- Next: the maintainer's dump becomes the milestone 4 fixtures
+  (`test/fixtures/`), after a last manual check of the names.
+
 ## Milestone 4 — Caséta / RA2 Select model, devices, states, commands
 
 - [ ] `src/leap/model.js`: `/project`, `/area`, `/device`, `/button`,
@@ -228,8 +246,9 @@ To check on the maintainer's hardware (Caséta Smart Hub, Diva, Pico):
       `PressAndRelease`.
 - [ ] Transport badges (`local` / `unreachable`), zone states re-read
       every 15 min and after every reconnection.
-- [ ] Action `diagnostics` (sanitized: no certificate, key or serial in
-      clear), and `refresh_devices`.
+- [x] Action `diagnostics` (done ahead, see above); `refresh_devices`
+      (reconnect and reload, milestone 3) must also republish the
+      discovery list.
 - [ ] Fixtures: anonymized dump of the maintainer's bridge (question 2),
       plus the response files of pylutron-caseta's tests (Apache-2.0) for
       the device types we do not own.

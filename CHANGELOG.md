@@ -25,3 +25,8 @@ All notable changes to this project are documented here. The format follows
   "Refresh the devices"; connection status in English and French saying what
   is wrong and what to do; a bridge that changed IP address is found again by
   its serial number.
+- "Diagnostics" action: a read-only, anonymized dump of the Lutron system
+  (rooms, devices, buttons, scenes, levels; Caséta / RA2 Select and RA3 /
+  QSX) written to the integration logs between `LUTRON DIAGNOSTICS BEGIN`
+  and `LUTRON DIAGNOSTICS END`, one line per item. Serial numbers become
+  stable pseudonyms; MAC and IP addresses and positions are masked.

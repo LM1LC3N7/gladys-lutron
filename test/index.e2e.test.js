@@ -83,7 +83,22 @@ test('index.js: connection status, scan, actions, clean shutdown', async (t) => 
   assert.equal(pair.success, true, pair.error);
   assert.match(pair.data.message.en, /does not answer at 127\.0\.0\.1/);
 
-  // 4. A clean shutdown, and no secret in the logs.
+  // 4. Diagnostics: an anonymized dump between markers in the logs.
+  const diagnostics = await gladys.command(
+    'action.run',
+    { key: 'diagnostics', fields: {} },
+    20_000,
+  );
+  assert.equal(diagnostics.success, true, diagnostics.error);
+  assert.match(diagnostics.data.message.fr, /journaux/i);
+  await step('the diagnostics end marker', () => output.includes('LUTRON DIAGNOSTICS END'));
+  const dump = output.slice(
+    output.indexOf('LUTRON DIAGNOSTICS BEGIN'),
+    output.indexOf('LUTRON DIAGNOSTICS END'),
+  );
+  assert.match(dump, /"paired":false/, 'the bridge was forgotten above');
+
+  // 5. A clean shutdown, and no secret in the logs.
   child.kill('SIGTERM');
   assert.equal(await exited, 0);
   assert.ok(!output.includes('PRIVATE KEY'), 'no private key in the logs');

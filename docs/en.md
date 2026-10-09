@@ -89,8 +89,25 @@ certificate: another machine cannot pretend to be your bridge.
   bridge**, then pair again.
 - **States not updating**: click **Test the connection**; the integration
   also reconnects and reloads every state by itself.
-- **To report a problem**: click **Diagnostics** and attach the logs; they
-  contain no certificate and no serial number in clear.
+- **To report a problem**: see "Diagnostics" below.
+
+## Diagnostics
+
+The **Diagnostics** button reads the description of your Lutron system from
+the bridge (rooms, devices, buttons, scenes, current levels) and writes it to
+the integration logs. It only reads: nothing is changed on the bridge.
+
+1. Click **Diagnostics** (it takes a few seconds, up to a minute on a big
+   system).
+2. Open the **Logs** tab of the integration.
+3. Copy every line from `LUTRON DIAGNOSTICS BEGIN` to
+   `LUTRON DIAGNOSTICS END` and attach it to your report.
+
+The dump is anonymized: serial numbers are replaced by `serial-1`,
+`serial-2`…, MAC and IP addresses and any geographic position are masked,
+and no certificate or key is ever included. Room and device names are kept,
+since they explain your setup; rename them in the dump if you prefer. When
+the bridge is not connected, only the connection state is written.
 
 Not affiliated with Lutron Electronics. Lutron, Caséta, Pico, RadioRA and
 HomeWorks are trademarks of Lutron Electronics Co., Inc.

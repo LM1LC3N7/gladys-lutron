@@ -7,6 +7,7 @@
 // environment injected by the Gladys supervisor.
 // -----------------------------------------------------------------------------
 
+import { readFileSync } from 'node:fs';
 import { GladysIntegration, logger } from '@gladysassistant/integration-sdk';
 import { normalizeConfig } from './src/config.js';
 import { createBridgeController } from './src/gladys/bridgeController.js';
@@ -16,11 +17,14 @@ import { MESSAGES } from './src/gladys/messages.js';
 // Development only: a fake bridge on other ports (the TLS checks stay on).
 const port = (name) => Number.parseInt(process.env[name] ?? '', 10) || undefined;
 
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+
 const gladys = new GladysIntegration();
 const bridge = createBridgeController({
   gladys,
   logger,
   ports: { leap: port('LUTRON_LEAP_PORT'), pairing: port('LUTRON_PAIRING_PORT') },
+  version,
 });
 
 // Surfaces of later milestones (TODO.md) answer explicitly meanwhile.
@@ -38,7 +42,7 @@ gladys.onAction(MANIFEST_ACTIONS.PAIR_BRIDGE, () => bridge.pairAction());
 gladys.onAction(MANIFEST_ACTIONS.TEST_CONNECTION, () => bridge.testConnection());
 gladys.onAction(MANIFEST_ACTIONS.REFRESH_DEVICES, () => bridge.refresh());
 gladys.onAction(MANIFEST_ACTIONS.FORGET_BRIDGE, () => bridge.forget());
-gladys.onAction(MANIFEST_ACTIONS.DIAGNOSTICS, () => notYet);
+gladys.onAction(MANIFEST_ACTIONS.DIAGNOSTICS, () => bridge.diagnostics());
 gladys.onSceneAction(SCENE_ACTIONS.SET_LEVEL_WITH_FADE, () => {
   throw new Error(notYet.en);
 });

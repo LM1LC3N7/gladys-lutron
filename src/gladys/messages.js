@@ -77,6 +77,18 @@ export const MESSAGES = Object.freeze({
     en: `The bridge moved from ${from} to ${to}: address updated. Give it a fixed IP in your router.`,
     fr: `Le bridge est passé de ${from} à ${to} : adresse mise à jour. Donnez-lui une IP fixe dans votre box.`,
   }),
+  diagnosticsDone: (count, truncated) => ({
+    en: `Diagnostics written to the logs (${count} answers from the bridge${truncated ? ', truncated' : ''}). Open the Logs tab and copy everything from "LUTRON DIAGNOSTICS BEGIN" to "LUTRON DIAGNOSTICS END". Serial numbers, MAC and IP addresses are masked; room and device names are kept.`,
+    fr: `Diagnostic écrit dans les journaux (${count} réponses du bridge${truncated ? ', tronqué' : ''}). Ouvrez l'onglet Journaux et copiez tout de « LUTRON DIAGNOSTICS BEGIN » à « LUTRON DIAGNOSTICS END ». Numéros de série, adresses MAC et IP sont masqués ; les noms des pièces et des appareils sont conservés.`,
+  }),
+  diagnosticsOffline: {
+    en: 'The bridge is not connected: only the connection state was written to the logs (between "LUTRON DIAGNOSTICS BEGIN" and "END"). Connect the bridge for a full diagnostic.',
+    fr: "Le bridge n'est pas connecté : seul l'état de la connexion a été écrit dans les journaux (entre « LUTRON DIAGNOSTICS BEGIN » et « END »). Connectez le bridge pour un diagnostic complet.",
+  },
+  diagnosticsRunning: {
+    en: 'A diagnostic is already running.',
+    fr: 'Un diagnostic est déjà en cours.',
+  },
   notAvailableYet: {
     en: 'Not available yet in this development version.',
     fr: 'Pas encore disponible dans cette version de développement.',

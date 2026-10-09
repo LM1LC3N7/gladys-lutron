@@ -95,8 +95,27 @@ passer pour votre bridge.
 - **États qui ne se mettent plus à jour** : cliquez sur **Tester la
   connexion** ; l'intégration se reconnecte et relit aussi tous les états
   d'elle-même.
-- **Pour signaler un problème** : cliquez sur **Diagnostic** et joignez les
-  journaux ; ils ne contiennent ni certificat ni numéro de série en clair.
+- **Pour signaler un problème** : voir « Diagnostic » ci-dessous.
+
+## Diagnostic
+
+Le bouton **Diagnostic** lit auprès du bridge la description de votre
+système Lutron (pièces, appareils, boutons, scènes, niveaux actuels) et
+l'écrit dans les journaux de l'intégration. Il ne fait que lire : rien n'est
+modifié sur le bridge.
+
+1. Cliquez sur **Diagnostic** (quelques secondes, jusqu'à une minute sur une
+   grosse installation).
+2. Ouvrez l'onglet **Journaux** de l'intégration.
+3. Copiez toutes les lignes de `LUTRON DIAGNOSTICS BEGIN` à
+   `LUTRON DIAGNOSTICS END` et joignez-les à votre signalement.
+
+L'export est anonymisé : les numéros de série sont remplacés par `serial-1`,
+`serial-2`…, les adresses MAC et IP et toute position géographique sont
+masquées, et aucun certificat ni aucune clé n'y figure jamais. Les noms des
+pièces et des appareils sont conservés, car ils expliquent votre
+installation ; renommez-les dans l'export si vous préférez. Quand le bridge
+n'est pas connecté, seul l'état de la connexion est écrit.
 
 Non affilié à Lutron Electronics. Lutron, Caséta, Pico, RadioRA et
 HomeWorks sont des marques de Lutron Electronics Co., Inc.

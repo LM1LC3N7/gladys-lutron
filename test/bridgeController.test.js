@@ -235,3 +235,45 @@ test('a paired configuration without IP address says so', async (t) => {
   assert.match(lastStatus(gladys).message.en, /IP address of the bridge is empty/);
   assert.equal(controller.session, null);
 });
+
+test('"Diagnostics" writes an anonymized dump between markers in the logs', async (t) => {
+  const bridge = await startFakeBridge({ routes: BRIDGE_ROUTES });
+  t.after(() => bridge.close());
+  const gladys = fakeGladys({ ...PAIRED });
+  const lines = [];
+  const controller = createBridgeController({
+    gladys,
+    logger: { ...silent, info: (line) => lines.push(line) },
+    version: '9.9.9',
+    createSession: (options) =>
+      new LeapSession({ ...options, timings: FAST, connectionOptions: { port: bridge.port } }),
+  });
+  t.after(() => controller.close());
+  await controller.apply(normalizeConfig(gladys.config));
+  await waitFor(() => controller.session?.connected);
+  lines.length = 0;
+  const message = await controller.diagnostics();
+  assert.match(message.en, /Diagnostics written to the logs \(\d+ answers/);
+  assert.match(message.fr, /Journaux/);
+  const begin = lines.indexOf('===== LUTRON DIAGNOSTICS BEGIN =====');
+  const end = lines.indexOf('===== LUTRON DIAGNOSTICS END =====');
+  assert.ok(begin !== -1 && end > begin);
+  const dump = lines.slice(begin, end + 1).join('\n');
+  assert.match(dump, /"version":"9\.9\.9"/);
+  assert.match(dump, /"url":"\/project"/);
+  assert.doesNotMatch(dump, /19114957|0123ABCD|BEGIN CERTIFICATE|PRIVATE KEY/);
+});
+
+test('"Diagnostics" without a connected bridge still logs the connection state', async (t) => {
+  const lines = [];
+  const controller = createBridgeController({
+    gladys: fakeGladys(),
+    logger: { ...silent, info: (line) => lines.push(line) },
+  });
+  t.after(() => controller.close());
+  await controller.apply(normalizeConfig({}));
+  const message = await controller.diagnostics();
+  assert.match(message.en, /not connected/);
+  assert.equal(lines[0], '===== LUTRON DIAGNOSTICS BEGIN =====');
+  assert.match(lines[1], /"paired":false/);
+});

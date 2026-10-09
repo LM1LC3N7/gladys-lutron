@@ -9,7 +9,9 @@
 // saves the form.
 // -----------------------------------------------------------------------------
 
+import { anonymize } from '../leap/anonymize.js';
 import { readBridgeInfo } from '../leap/bridgeInfo.js';
+import { collectDiagnostics, toLogLines } from '../leap/diagnostics.js';
 import { parseMdnsResults } from '../leap/discovery.js';
 import { BridgeUnreachableError } from '../leap/errors.js';
 import { pairBridge } from '../leap/pairing.js';
@@ -34,6 +36,7 @@ const REDISCOVER_INTERVAL_MS = 5 * 60_000;
  * @param {typeof pairBridge} [options.pair]
  * @param {number} [options.rediscoverIntervalMs]
  * @param {{ leap?: number, pairing?: number }} [options.ports] non-standard ports (development)
+ * @param {string} [options.version] integration version, written in the diagnostics
  */
 export function createBridgeController({
   gladys,
@@ -44,6 +47,7 @@ export function createBridgeController({
   pair = pairBridge,
   rediscoverIntervalMs = REDISCOVER_INTERVAL_MS,
   ports = {},
+  version = 'unknown',
 }) {
   /** @type {import('../config.js').LutronConfig | null} */
   let config = null;
@@ -51,6 +55,7 @@ export function createBridgeController({
   let session = null;
   let info = null;
   let pairing = false;
+  let diagnosing = false;
   let lastStatusKey = null;
   let lastRediscover = 0;
 
@@ -286,6 +291,42 @@ export function createBridgeController({
       if (!session) return idleStatus().message;
       await session.restart();
       return currentStatus().message;
+    },
+
+    /** Configuration action "Diagnostics": an anonymized dump in the logs. */
+    async diagnostics() {
+      if (diagnosing) return MESSAGES.diagnosticsRunning;
+      diagnosing = true;
+      try {
+        const status = session?.status();
+        const header = {
+          integration: 'gladys-lutron',
+          version,
+          node: process.version,
+          paired: Boolean(config?.credentials),
+          bridgeType: config?.bridgeType ?? null,
+          buttonDetection: config?.buttonDetection ?? null,
+          defaultFadeSeconds: config?.defaultFadeSeconds ?? null,
+          session: status
+            ? {
+                state: status.state,
+                leapVersion: status.leapVersion,
+                error: status.error ? `${status.error.name}: ${status.error.message}` : null,
+              }
+            : null,
+          bridge: info ? anonymize(info) : null,
+        };
+        const connected = Boolean(session?.connected && session.connection);
+        const report = connected
+          ? await collectDiagnostics(session.connection, { system: info?.system })
+          : { entries: [], truncated: false, durationMs: 0 };
+        for (const line of toLogLines(report, anonymize(header))) logger.info(line);
+        return connected
+          ? MESSAGES.diagnosticsDone(report.entries.length, report.truncated)
+          : MESSAGES.diagnosticsOffline;
+      } finally {
+        diagnosing = false;
+      }
     },
 
     async close() {
