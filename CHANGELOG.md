@@ -13,3 +13,8 @@ All notable changes to this project are documented here. The format follows
 - Project scaffold: manifest (configuration, actions, scene triggers and
   actions, widget, mDNS discovery), Docker image, CI, store documentation in
   English and French, cover image.
+- In-house LEAP client, without any runtime dependency: TLS connection
+  checking the bridge certificate, request correlation, subscriptions,
+  paging, keep-alive ping every minute, reconnection with backoff and full
+  reload after every reconnection, explicit errors (bridge unreachable,
+  certificate refused, invalid pairing).

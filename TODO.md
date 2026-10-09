@@ -22,7 +22,7 @@ The research behind every choice is in [AUDIT.md](./AUDIT.md).
 - [x] **Milestone 0 — audit and plan** (this file, [AUDIT.md](./AUDIT.md))
 - [x] Answers to the open questions (2026-10-09, see "Answers" below)
 - [x] **Milestone 1 — scaffold, manifest, store validation, CI**
-- [ ] **Milestone 2 — LEAP client: connection, framing, watchdog**
+- [x] **Milestone 2 — LEAP client: connection, framing, watchdog**
 - [ ] **Milestone 3 — pairing, discovery, configuration UX**
 - [ ] **Milestone 4 — Caséta / RA2 Select model, devices, states, commands**
 - [ ] **Milestone 5 — Pico remotes and buttons (click, double, long)**
@@ -131,23 +131,38 @@ Scene actions: `set_level_with_fade` (device, level 0–100, fade seconds),
 
 Widget: `lutron_overview` (see milestone 6).
 
-## Milestone 2 — LEAP client (`src/leap/`, no Gladys import)
+## Milestone 2 — LEAP client (`src/leap/`, no Gladys import) (done)
 
-- [ ] `connection.js`: `tls.connect` with the stored credentials, line
-      framing with `StringDecoder` (UTF-8 split across chunks), buffer cap
-      (4 MB, big RA3 projects), `ClientTag` correlation with timeout and
-      cleanup, `204 NoContent` = empty body, untagged messages dispatched as
-      unsolicited events, typed errors (`LeapTimeoutError`,
-      `LeapStatusError`, `CertificateRefusedError`, `BridgeUnreachableError`).
-- [ ] `session.js`: ping watchdog (60 s / 10 s), backoff 2 s → 60 s,
-      `onReady` hook that reloads the model and subscribes again on every
-      connection, close on a failed reload (pylutron #206), `close()` that
-      clears every timer.
-- [ ] Paging header support when a response is paged (big projects).
-- [ ] Tests: a fake LEAP TLS server (test CA + certificates in
-      `test/fixtures/tls/`), replies split in arbitrary chunks, accented
-      names, timeouts, half-open socket (no ping answer), bridge restart,
-      subscriptions restored after reconnection.
+- `framing.js`: JSON lines with a UTF-8 `StringDecoder` (accents split
+  across chunks), 4 MB cap, malformed lines skipped, `parseStatus`,
+  `idFromHref`.
+- `errors.js`: `BridgeUnreachableError`, `CertificateRefusedError`
+  (`refusedBy: bridge | integration`), `InvalidCredentialsError`,
+  `LeapTimeoutError`, `LeapStatusError`, `LeapClosedError`,
+  `BridgeClosedEarlyError`.
+- `connection.js`: TLS 1.2+ with the pairing credentials, chain verified
+  against the pairing authority (host-name check only skipped), `ClientTag`
+  correlation, timed-out requests forgotten, `204` = null body, paging
+  followed and merged, tagged subscriptions, untagged messages emitted as
+  `unsolicited`, throwing handlers isolated.
+- `session.js`: ping every 60 s (10 s timeout), backoff 2 s → 60 s,
+  `onReady(connection)` after every (re)connection with a 90 s timeout and a
+  close-and-retry on failure, no retry on a certificate problem until
+  `reconnectNow()`, `restart()`, `stop()` that never waits for a model load.
+- Tests: a fake LEAP bridge over TLS (`test/helpers/fakeBridge.js`, test
+  certificates in `test/fixtures/tls/`).
+
+Findings to check on real hardware (milestone 3/4):
+
+- Node's TLS server closes the socket instead of sending a TLS alert when it
+  refuses a client certificate; a real bridge (OpenSSL) should send an alert
+  (`ERR_SSL_*_ALERT_*`), classified as "the bridge refused our certificate".
+  If it closes silently instead, the session reports
+  `BridgeClosedEarlyError` ("closed right after accepting"), and the status
+  suggests pairing again.
+- Unsolicited messages received while the model loads are not forwarded
+  (the model is not ready); the zone states are read explicitly at the end
+  of the load, and again every 15 minutes (milestone 4).
 
 ## Milestone 3 — pairing, discovery, configuration UX
 
