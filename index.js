@@ -9,8 +9,7 @@
 
 import { readFileSync } from 'node:fs';
 import { GladysIntegration, logger } from '@gladysassistant/integration-sdk';
-import { normalizeConfig } from './src/config.js';
-import { createBridgeController } from './src/gladys/bridgeController.js';
+import { createLutronIntegration } from './src/gladys/integration.js';
 import { MANIFEST_ACTIONS, SCENE_ACTIONS, WIDGETS } from './src/gladys/keys.js';
 import { MESSAGES } from './src/gladys/messages.js';
 
@@ -20,23 +19,23 @@ const port = (name) => Number.parseInt(process.env[name] ?? '', 10) || undefined
 const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 const gladys = new GladysIntegration();
-const bridge = createBridgeController({
+const lutron = createLutronIntegration({
   gladys,
   logger,
-  ports: { leap: port('LUTRON_LEAP_PORT'), pairing: port('LUTRON_PAIRING_PORT') },
   version,
+  ports: { leap: port('LUTRON_LEAP_PORT'), pairing: port('LUTRON_PAIRING_PORT') },
 });
+const { bridge } = lutron;
 
 // Surfaces of later milestones (TODO.md) answer explicitly meanwhile.
 const notYet = MESSAGES.notAvailableYet;
 
-const applyConfig = (raw = {}) => bridge.apply(normalizeConfig(raw));
+gladys.onConfigUpdated((raw) => lutron.applyConfig(raw));
+gladys.on('connected', () => lutron.applyConfig(gladys.config));
 
-gladys.onConfigUpdated((raw) => applyConfig(raw));
-gladys.on('connected', () => applyConfig(gladys.config));
-
-// Always answer a scan: an empty list ends it at once (devices: milestone 4).
-gladys.onScanRequest(() => gladys.publishDiscoveredDevices([]));
+gladys.onScanRequest(() => lutron.onScanRequest());
+gladys.onSetValue((device, feature, value) => lutron.onSetValue(device, feature, value));
+gladys.onDeviceCreated((device) => lutron.onDeviceCreated(device));
 
 gladys.onAction(MANIFEST_ACTIONS.PAIR_BRIDGE, () => bridge.pairAction());
 gladys.onAction(MANIFEST_ACTIONS.TEST_CONNECTION, () => bridge.testConnection());
@@ -56,7 +55,7 @@ gladys.onWidgetGet(WIDGETS.OVERVIEW, () => ({
 
 gladys.handleShutdown(async (signal) => {
   logger.info(`Received ${signal} -> graceful shutdown`);
-  await bridge.close();
+  await lutron.close();
 });
 
 logger.info('Starting the Lutron integration...');

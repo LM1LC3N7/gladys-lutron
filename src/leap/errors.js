@@ -94,3 +94,10 @@ export class BridgeClosedEarlyError extends LeapClosedError {
     super('The Lutron bridge closed the connection right after accepting it');
   }
 }
+
+/** A command while the bridge is not connected (or still loading). */
+export class BridgeOfflineError extends LeapError {
+  constructor() {
+    super('The Lutron bridge is not connected');
+  }
+}

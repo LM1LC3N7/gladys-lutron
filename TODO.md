@@ -24,7 +24,7 @@ The research behind every choice is in [AUDIT.md](./AUDIT.md).
 - [x] **Milestone 1 — scaffold, manifest, store validation, CI**
 - [x] **Milestone 2 — LEAP client: connection, framing, watchdog**
 - [x] **Milestone 3 — pairing, discovery, configuration UX**
-- [ ] **Milestone 4 — Caséta / RA2 Select model, devices, states, commands**
+- [x] **Milestone 4 — Caséta / RA2 Select model, devices, states, commands**
 - [ ] **Milestone 5 — Pico remotes and buttons (click, double, long)**
 - [ ] **Milestone 6 — scene actions, scene triggers, dashboard widget →
       release 0.1.0**
@@ -223,35 +223,52 @@ To check on the maintainer's hardware (Caséta Smart Hub, Diva, Pico):
 - Next: the maintainer's dump becomes the milestone 4 fixtures
   (`test/fixtures/`), after a last manual check of the names.
 
-## Milestone 4 — Caséta / RA2 Select model, devices, states, commands
+## Milestone 4 — Caséta / RA2 Select model, devices, states, commands (done)
 
-- [ ] `src/leap/model.js`: `/project`, `/area`, `/device`, `/button`,
-      `/virtualbutton`, `/occupancygroup`, zone statuses, the bridge device,
-      Smart Away, shade battery; normalized model (areas, zones with type,
-      button groups, occupancy groups, scenes). Unknown types logged once and
-      skipped, never fatal.
-- [ ] `src/leap/deviceTypes.js`: Lutron device type → kind (dimmer, switch,
-      shade, tilt blind, open/close/stop cover, fan, CCO, Pico, keypad,
-      sensor), from pylutron-caseta's lists.
-- [ ] `src/gladys/devices.js`: Discover tab. Device name "<Area> <Name>"
-      (the Lutron area as a hint for the Gladys room). Features: see
-      AUDIT.md §5 table. Bridge device: Smart Away switch.
-- [ ] `src/gladys/states.js`: zone status → states (dimmer level → binary +
-      brightness; shade level → position; fan speed → percent; switched
-      level → binary; occupancy → presence; battery → battery-low), batched,
-      deduplicated except buttons, only for created devices.
-- [ ] `src/gladys/commands.js`: `onSetValue` → LEAP command, answer within
-      5 s, last non-zero level remembered for "on", optimistic position for
-      `Raise` / `Lower` (no immediate status), scene `push` →
-      `PressAndRelease`.
-- [ ] Transport badges (`local` / `unreachable`), zone states re-read
-      every 15 min and after every reconnection.
-- [x] Action `diagnostics` (done ahead, see above); `refresh_devices`
-      (reconnect and reload, milestone 3) must also republish the
-      discovery list.
-- [ ] Fixtures: anonymized dump of the maintainer's bridge (question 2),
-      plus the response files of pylutron-caseta's tests (Apache-2.0) for
-      the device types we do not own.
+- `src/leap/deviceTypes.js`: Lutron DeviceType / zone ControlType → kind
+  (dimmer, white tune, spectrum, switch, CCO, fan, shade, drape, lift+tilt,
+  tilt-only, open/close/stop, remote, keypad, occupancy sensor), from
+  pylutron-caseta's lists, plus suffix rules for new models (`…Shade`,
+  `…Drape`, `Pico…`, `…Keypad`). Unknown → null, logged once, skipped.
+- `src/leap/model.js`: `/area`, `/device` (required), `/virtualbutton`,
+  `/occupancygroup`, `/system/away/1/status`, `/device/{id}/status` of the
+  battery powered devices (optional: a 404 or a silent endpoint is skipped).
+  Zones named "<Area> <Name>".
+- `src/leap/status.js`: zone, button, occupancy, area, Smart Away, LED and
+  battery bodies → plain values; `src/leap/commands.js`: LEAP command bodies
+  (`GoToLevel`, `GoToDimmedLevel` with `FadeTime`, white / spectrum tuning,
+  `GoToCCOLevel`, `GoToFanSpeed`, `GoToTilt`, `Raise` / `Lower` / `Stop`,
+  `PressAndRelease`).
+- `src/leap/system.js`: `attach(connection)` from the session `onReady`:
+  model, subscriptions (occupancy, Smart Away), every zone status read, then
+  the events (`model`, `zone`, `occupancy`, `smartAway`, `battery`,
+  `offline`); messages routed by their body (tagged or not); states received
+  while loading are applied, emitted after the model; resync every 15 min
+  (zones, occupancy, Smart Away, batteries). Commands: the answer's status is
+  applied at once; "on" restores the last level above 0.
+- `src/gladys/devices.js`: catalog (Discover tab) and index feature → target.
+  External ids: zone `<device serial>` (or `<bridge serial>-zone-<id>` when
+  the serial is missing or not unique: pylutron's fixtures have duplicates),
+  occupancy `<bridge serial>-<group id>`, scene `<bridge serial>-scene-<id>`,
+  bridge `<bridge serial>` (Smart Away). Params `LUTRON_AREA`, `LUTRON_TYPE`,
+  `LUTRON_MODEL`, `GLADYS_TRANSPORT`.
+- `src/gladys/states.js`: only created features, deduplicated, ≤ 100 per
+  request, ≤ 250 per minute (the rest waits), a failed batch republished
+  with the next change, replay when a device is created; button events
+  published at once, never deduplicated.
+- `src/gladys/commands.js`: on/off, brightness, switch, fan, position (tilt
+  for tilt-only blinds), open/close/stop (`Raise`/`Lower`/`Stop`, or tilt
+  50/0), Smart Away, scene; optimistic position after `Raise`/`Lower`.
+- `src/gladys/availability.js`: transport badges and the offline / online
+  detection (used by the scene triggers of milestone 6).
+- `src/gladys/integration.js`: the wiring; the Discover tab is published
+  after every model load (so "Refresh the devices" refreshes it).
+- Fixtures: pylutron-caseta's test responses (`test/fixtures/pylutron/`,
+  Apache-2.0) served by `test/helpers/pylutronBridge.js`.
+
+Still to check on the maintainer's bridge: the unsolicited zone statuses
+after a command and a Pico press (no explicit subscription on Caséta, like
+pylutron-caseta), `MessageBodyType` values, the battery answer of a sensor.
 
 ## Milestone 5 — Pico remotes and buttons
 

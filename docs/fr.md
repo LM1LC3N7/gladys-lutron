@@ -54,6 +54,30 @@ Si la recherche ne trouve rien, saisissez l'adresse IP : certains réseaux
 (VLAN, Wi-Fi maillé, installations Docker) bloquent les annonces de
 découverte, pas la connexion elle-même.
 
+## Appareils
+
+Chaque appareil Lutron devient un appareil Gladys nommé d'après sa pièce
+Lutron (« Salon Plafonnier »), prêt à ranger dans la pièce Gladys
+correspondante :
+
+| Lutron                                  | Dans Gladys                                                                          |
+| --------------------------------------- | ------------------------------------------------------------------------------------ |
+| Variateur (Diva, Caséta, Sunnata…)      | Lumière : marche/arrêt et luminosité                                                 |
+| Interrupteur, module à brancher, relais | Interrupteur : marche/arrêt                                                          |
+| Commande de ventilateur                 | Ventilateur : vitesse en % (0 arrêt, 25 lent, 50 moyen, 75 moyen-rapide, 100 rapide) |
+| Store, store enrouleur, store plissé    | Volet : ouvrir / fermer / stop et position                                           |
+| Rideau                                  | Rideau : ouvrir / fermer / stop et position                                          |
+| Store vénitien en bois (lames seules)   | Volet : la position oriente les lames (50 = ouvertes, 0 = fermées)                   |
+| Détecteurs de présence d'une pièce      | Présence : occupée / libre                                                           |
+| Scène Lutron                            | Bouton « Activer »                                                                   |
+| Bridge                                  | Interrupteur « Smart Away »                                                          |
+| Store ou détecteur à piles              | « Pile faible » (Lutron indique seulement bonne ou faible)                           |
+
+« Marche » rallume une lumière à son dernier niveau. Les états suivent le
+bridge en temps réel, et sont relus toutes les 15 minutes et après chaque
+reconnexion. Le badge de l'appareil indique « local », ou « injoignable »
+quand le bridge ne répond plus depuis 2 minutes.
+
 ## Télécommandes Pico
 
 Chaque Pico devient un appareil Gladys avec un bouton par bouton physique

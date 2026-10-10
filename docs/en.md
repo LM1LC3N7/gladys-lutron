@@ -51,6 +51,29 @@ If the search finds nothing, type the IP address: some networks (VLANs,
 mesh Wi-Fi, Docker installs) block the discovery announcements, not the
 connection itself.
 
+## Devices
+
+Each Lutron device becomes a Gladys device named after its Lutron room
+("Living room Ceiling"), ready to place in the matching Gladys room:
+
+| Lutron                          | In Gladys                                                            |
+| ------------------------------- | -------------------------------------------------------------------- |
+| Dimmer (Diva, Caséta, Sunnata…) | Light: on/off and brightness                                         |
+| Switch, plug-in module, relay   | Switch: on/off                                                       |
+| Fan control                     | Fan: speed in % (0 off, 25 low, 50 medium, 75 medium-high, 100 high) |
+| Shade, roller, honeycomb        | Shutter: open / close / stop and position                            |
+| Drape                           | Curtain: open / close / stop and position                            |
+| Tilt-only wood blind            | Shutter: the position tilts the slats (50 = open, 0 = closed)        |
+| Occupancy sensors of a room     | Presence: occupied / free                                            |
+| Lutron scene                    | Push button "Activate"                                               |
+| Bridge                          | Switch "Smart Away"                                                  |
+| Battery shade or sensor         | "Battery low" (Lutron only says good or low)                         |
+
+"On" brings a light back to its last level. States follow the bridge in
+real time, are read again every 15 minutes and after every reconnection.
+The device badge says "local", or "unreachable" when the bridge has not
+answered for 2 minutes.
+
 ## Pico remotes
 
 Each Pico becomes a Gladys device with one button per physical button (On,

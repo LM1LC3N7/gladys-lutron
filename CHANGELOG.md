@@ -30,3 +30,12 @@ All notable changes to this project are documented here. The format follows
   QSX) written to the integration logs between `LUTRON DIAGNOSTICS BEGIN`
   and `LUTRON DIAGNOSTICS END`, one line per item. Serial numbers become
   stable pseudonyms; MAC and IP addresses and positions are masked.
+- Devices: dimmers, switches and plug-in modules, relays (CCO), fans (four
+  speeds), shades, drapes, tilt-only blinds, open/close/stop covers,
+  occupancy groups, Lutron scenes and Smart Away, published to the Discover
+  tab with the Lutron room in their name; shade and sensor batteries.
+  States follow the bridge in real time and are read again every 15 minutes
+  and after every reconnection; only the devices created in Gladys get
+  states, deduplicated, batched and kept under the Gladys rate limit.
+  Commands from Gladys ("on" restores the last level, the default fade time
+  applies to every level). Transport badges ("local" / "unreachable").

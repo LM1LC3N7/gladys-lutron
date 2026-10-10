@@ -13,6 +13,12 @@ authorities, in src/leap/assets.js) come from pylutron-caseta:
   Copyright the pylutron-caseta contributors
   Licensed under the Apache License, Version 2.0
 
+The LEAP answers used as test fixtures (test/fixtures/pylutron/) are copied
+from the tests of pylutron-caseta. The Pico button numbers per model
+(src/leap/picoModels.js) follow the tables of the Home Assistant
+lutron_caseta integration (https://github.com/home-assistant/core,
+Apache-2.0).
+
 No code of lutron-leap (GPL-3.0) is used or copied.
 
 Lutron, Caséta, Pico, RadioRA and HomeWorks are trademarks of Lutron

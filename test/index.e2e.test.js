@@ -7,15 +7,19 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { ok, startFakeBridge } from './helpers/fakeBridge.js';
 import { startFakeGladys } from './helpers/fakeGladys.js';
+import { casetaRoutes } from './helpers/pylutronBridge.js';
 import { CREDENTIALS } from './helpers/tls.js';
 import { waitFor } from './helpers/waitFor.js';
 
 const WAIT = { timeoutMs: 8000 };
+const SELECTOR = 'ext-lm1lc3n7-gladys-lutron';
+// The Hallway dimmer of the pylutron fixtures (serial 2345 = 0x929, zone 1).
+const DIMMER = `ext:${SELECTOR}:zone:00000929`;
 
 test('index.js: connection status, scan, actions, clean shutdown', async (t) => {
   const bridge = await startFakeBridge({
     routes: {
-      '/project': () => ok({ Project: { ProductType: 'Lutron Smart Bridge Project' } }),
+      ...casetaRoutes(),
       '/device?where=IsThisDevice:true': () =>
         ok({
           Devices: [{ Name: 'Smart Bridge', ModelNumber: 'L-BDG2-WH', SerialNumber: 19114957 }],
@@ -30,6 +34,12 @@ test('index.js: connection status, scan, actions, clean shutdown', async (t) => 
       leap_cert: CREDENTIALS.cert,
       leap_ca: CREDENTIALS.ca,
     },
+    devices: [
+      {
+        external_id: DIMMER,
+        features: [{ external_id: `${DIMMER}:on` }, { external_id: `${DIMMER}:brightness` }],
+      },
+    ],
   });
   t.after(() => gladys.close());
 
@@ -39,7 +49,7 @@ test('index.js: connection status, scan, actions, clean shutdown', async (t) => 
       ...process.env,
       GLADYS_HOST_API_URL: gladys.url,
       GLADYS_INTEGRATION_TOKEN: 'test-token',
-      GLADYS_INTEGRATION_SELECTOR: 'ext-lm1lc3n7-gladys-lutron',
+      GLADYS_INTEGRATION_SELECTOR: SELECTOR,
       LUTRON_LEAP_PORT: String(bridge.port),
       LUTRON_PAIRING_PORT: '1',
       LOG_LEVEL: 'debug',
@@ -68,11 +78,39 @@ test('index.js: connection status, scan, actions, clean shutdown', async (t) => 
   );
   assert.equal(gladys.config.bridge_serial, '0123ABCD', 'the serial read from the bridge is saved');
 
-  // 2. A scan is always answered.
+  // 2. The project is published to the Discover tab, the states of the
+  // created dimmer follow, and a scan publishes the list again.
+  await step('the discovered devices', () => gladys.posts('/discovered_device').length === 1);
+  const discovered = gladys.posts('/discovered_device')[0].body.devices;
+  assert.ok(
+    discovered.some((device) => device.external_id === DIMMER && device.name === 'Hallway Lights'),
+  );
+  await step('the dimmer states', () =>
+    gladys
+      .posts('/state')
+      .some((post) =>
+        post.body.states.some(
+          (s) => s.device_feature_external_id === `${DIMMER}:brightness` && s.state === 40,
+        ),
+      ),
+  );
   gladys.send('scan-request');
-  await step('the discovery answer', () => gladys.posts('/discovered_device').length === 1);
+  await step('the discovery answer', () => gladys.posts('/discovered_device').length === 2);
 
-  // 3. Configuration actions.
+  // 3. A command from Gladys becomes a LEAP command.
+  const command = await gladys.command('device.set-value', {
+    device: { external_id: DIMMER },
+    device_feature: { external_id: `${DIMMER}:brightness` },
+    value: 75,
+  });
+  assert.equal(command.success, true, command.error);
+  const sent = bridge.requestsTo('/zone/1/commandprocessor').at(-1);
+  assert.deepEqual(sent.Body.Command, {
+    CommandType: 'GoToLevel',
+    Parameter: [{ Type: 'Level', Value: 75 }],
+  });
+
+  // 4. Configuration actions.
   const test1 = await gladys.command('action.run', { key: 'test_connection', fields: {} });
   assert.equal(test1.success, true, test1.error);
   assert.match(test1.data.message.en, /Connected to Smart Bridge/);
@@ -83,7 +121,7 @@ test('index.js: connection status, scan, actions, clean shutdown', async (t) => 
   assert.equal(pair.success, true, pair.error);
   assert.match(pair.data.message.en, /does not answer at 127\.0\.0\.1/);
 
-  // 4. Diagnostics: an anonymized dump between markers in the logs.
+  // 5. Diagnostics: an anonymized dump between markers in the logs.
   const diagnostics = await gladys.command(
     'action.run',
     { key: 'diagnostics', fields: {} },
@@ -98,7 +136,7 @@ test('index.js: connection status, scan, actions, clean shutdown', async (t) => 
   );
   assert.match(dump, /"paired":false/, 'the bridge was forgotten above');
 
-  // 5. A clean shutdown, and no secret in the logs.
+  // 6. A clean shutdown, and no secret in the logs.
   child.kill('SIGTERM');
   assert.equal(await exited, 0);
   assert.ok(!output.includes('PRIVATE KEY'), 'no private key in the logs');
