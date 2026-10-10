@@ -11,7 +11,7 @@
 # talks to Gladys and to the Lutron bridge on the local network.
 # -----------------------------------------------------------------------------
 
-FROM node:24-alpine
+FROM node:25-alpine
 
 # dumb-init: handles signals (SIGTERM) correctly for a graceful shutdown.
 RUN apk add --no-cache dumb-init
