@@ -5,8 +5,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LeapConnection } from '../src/leap/connection.js';
 import { KINDS } from '../src/leap/deviceTypes.js';
-import { LeapClosedError, LeapStatusError } from '../src/leap/errors.js';
-import { displayName, parseAreas, readOptional } from '../src/leap/model.js';
+import { LeapClosedError, LeapStatusError, LeapTimeoutError } from '../src/leap/errors.js';
+import { displayName, parseAreas, readListing, readOptional } from '../src/leap/model.js';
 import { loadModel } from '../src/leap/system.js';
 import { ok, startFakeBridge, status } from './helpers/fakeBridge.js';
 import { casetaRoutes } from './helpers/pylutronBridge.js';
@@ -161,4 +161,34 @@ test('loadModel (Caséta): a bare bridge (no scene, occupancy, Smart Away) and u
 test('loadModel: /area and /device are required', async (t) => {
   const { connection } = await connect(t, { '/area': () => ok({ Areas: [] }) });
   await assert.rejects(loadModel(connection, BRIDGE_INFO), LeapStatusError);
+});
+
+test('readListing: absent on a status, a timeout retried once longer, then the load fails', async () => {
+  const calls = [];
+  const connection = (answers) => ({
+    read: async (url, options) => {
+      calls.push(options?.timeoutMs ?? null);
+      const answer = answers.shift();
+      if (answer instanceof Error) throw answer;
+      return answer;
+    },
+  });
+  const timeout = () => new LeapTimeoutError('/button', 4000);
+  assert.deepEqual(await readListing(connection([timeout(), { Buttons: [] }]), '/button'), {
+    Buttons: [],
+  });
+  assert.deepEqual(calls, [null, 10_000]);
+  await assert.rejects(
+    readListing(connection([timeout(), timeout()]), '/button'),
+    LeapTimeoutError,
+  );
+  assert.equal(
+    await readListing(connection([new LeapStatusError('/x', 404, '404 NotFound')]), '/x'),
+    null,
+  );
+  assert.equal(
+    await readListing(connection([timeout(), new LeapStatusError('/x', 404, '404')]), '/x'),
+    null,
+  );
+  await assert.rejects(readListing(connection([new LeapClosedError()]), '/x'), LeapClosedError);
 });

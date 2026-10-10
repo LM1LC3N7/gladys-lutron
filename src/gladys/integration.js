@@ -57,6 +57,7 @@ export function createLutronIntegration({
     version,
     ports,
     onReady: (connection, info) => system.attach(connection, info),
+    onStopped: () => availability.reset(),
     ...controllerOptions,
   });
 

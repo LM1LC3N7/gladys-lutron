@@ -307,6 +307,17 @@ test('integration (QSX): colour features, LEDs, area scene trigger, keypad press
   await set(keypad, 5, 1);
   assert.equal(bridge.requestsTo('/led/1632/status').at(-1).Body.LEDStatus.State, 'On');
 
+  // Area scene trigger: names, not ids.
+  bridge.broadcast({
+    CommuniqueType: 'ReadResponse',
+    Header: { StatusCode: '200 OK' },
+    Body: { AreaStatus: { href: '/area/804/status', CurrentScene: { href: '/areascene/812' } } },
+  });
+  await waitFor(() => gladys.callsOf('publishSceneEvent').length === 1);
+  assert.deepEqual(gladys.callsOf('publishSceneEvent')[0], [
+    'area_scene_activated',
+    { area: 'Foyer', scene: 'Scene 812' },
+  ]);
   // Scene action: by engraving or number.
   await lutron.pressKeypadButton({ device: keypad.external_id, button: 'shades' });
   assert.equal(bridge.requestsTo('/button/1640/commandprocessor').length, 1);
@@ -320,16 +331,4 @@ test('integration (QSX): colour features, LEDs, area scene trigger, keypad press
     lutron.pressKeypadButton({ device: lamp.external_id, button: '1' }),
     /Unknown Lutron keypad/,
   );
-
-  // Area scene trigger: names, not ids.
-  bridge.broadcast({
-    CommuniqueType: 'ReadResponse',
-    Header: { StatusCode: '200 OK' },
-    Body: { AreaStatus: { href: '/area/804/status', CurrentScene: { href: '/areascene/812' } } },
-  });
-  await waitFor(() => gladys.callsOf('publishSceneEvent').length === 1);
-  assert.deepEqual(gladys.callsOf('publishSceneEvent')[0], [
-    'area_scene_activated',
-    { area: 'Foyer', scene: 'Scene 812' },
-  ]);
 });

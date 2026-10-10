@@ -36,7 +36,7 @@ import {
   warmDimCommand,
 } from './commands.js';
 import { KINDS } from './deviceTypes.js';
-import { BridgeOfflineError } from './errors.js';
+import { BridgeOfflineError, LeapStatusError } from './errors.js';
 import { loadCasetaModel, readBatteries, readOptional } from './model.js';
 import { loadProcessorModel } from './processorModel.js';
 import {
@@ -60,8 +60,23 @@ export function loadModel(connection, bridge) {
     : loadProcessorModel(connection, bridge);
 }
 
-/** A scene change right after our own keypad press is not the user's. */
+/**
+ * A scene change right after our own keypad press is not the user's (in
+ * any area: a keypad may drive the scene of another room).
+ */
 const OWN_COMMAND_MS = 5000;
+
+/** Subscriptions in flight at once: a big QSX has hundreds of keys and LEDs. */
+const SUBSCRIBE_CONCURRENCY = 10;
+
+/** Run `task` on every item, at most `limit` at a time. */
+async function eachLimited(items, limit, task) {
+  const queue = [...items];
+  const worker = async () => {
+    while (queue.length > 0) await task(queue.shift());
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, queue.length) }, worker));
+}
 
 export const SYSTEM_TIMINGS = Object.freeze({
   resyncIntervalMs: 15 * 60_000,
@@ -105,8 +120,8 @@ export class LutronSystem extends EventEmitter {
     this.leds = new Map();
     /** @type {Map<string, string | null>} area id -> active area scene id */
     this.areaScenes = new Map();
-    /** @type {Map<string, number>} area id -> time of our last keypad press there */
-    this.ownPresses = new Map();
+    /** Time of our last keypad press (area scene changes ignored for a while). */
+    this.lastOwnPress = 0;
   }
 
   get processor() {
@@ -171,11 +186,14 @@ export class LutronSystem extends EventEmitter {
   /** @private */
   async subscribe(connection, model) {
     const route = (response) => this.receive(connection, response.body);
+    // Refused (an endpoint this bridge does not have): skipped. Anything
+    // else (a timeout) fails the load: a subscription lost now would stay
+    // lost, and the session retries the whole load.
     const optional = async (url) => {
       try {
         route(await connection.subscribe(url, route));
       } catch (error) {
-        if (connection.closed) throw error;
+        if (!(error instanceof LeapStatusError)) throw error;
         this.logger?.debug(`No subscription to ${url}: ${error.message}`);
       }
     };
@@ -184,10 +202,13 @@ export class LutronSystem extends EventEmitter {
     } else {
       await optional('/zone/status');
       await optional('/area/status');
-      for (const ledId of this.ledIds()) await optional(`/led/${ledId}/status`);
     }
     if (model.smartAway) await optional('/system/away/1/status');
-    for (const buttonId of this.buttons.keys()) await optional(`/button/${buttonId}/status/event`);
+    const urls = [
+      ...(model.system === 'caseta' ? [] : this.ledIds().map((id) => `/led/${id}/status`)),
+      ...[...this.buttons.keys()].map((id) => `/button/${id}/status/event`),
+    ];
+    await eachLimited(urls, SUBSCRIBE_CONCURRENCY, optional);
   }
 
   /** @private */
@@ -300,7 +321,7 @@ export class LutronSystem extends EventEmitter {
     this.areaScenes.set(areaId, sceneId);
     if (this.loading || !this.model || previous === undefined || previous === sceneId) return;
     if (!sceneId) return;
-    if (Date.now() - (this.ownPresses.get(areaId) ?? 0) < OWN_COMMAND_MS) return;
+    if (Date.now() - this.lastOwnPress < OWN_COMMAND_MS) return;
     const scene = this.model.scenes.find((s) => s.source === 'areascene' && s.id === sceneId);
     this.emit('areaScene', scene ?? { id: sceneId, name: `Scene ${sceneId}`, areaId }, areaId);
   }
@@ -464,7 +485,7 @@ export class LutronSystem extends EventEmitter {
         'A Caséta bridge cannot press a Pico button: control the light or the scene directly',
       );
     }
-    if (entry.device.areaId) this.ownPresses.set(entry.device.areaId, Date.now());
+    this.lastOwnPress = Date.now();
     return this.send(`/button/${buttonId}/commandprocessor`, pressCommand());
   }
 

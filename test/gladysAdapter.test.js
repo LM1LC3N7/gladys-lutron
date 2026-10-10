@@ -382,3 +382,29 @@ test('catalog: a serial shared by two devices or with the bridge identifies neit
     ['ABCD0001-zone-1', 'ABCD0001-zone-2', 'ABCD0001-zone-3', 'AAAA0004'],
   );
 });
+
+test('publisher: one request at a time, so Gladys keeps the latest value', async () => {
+  const gladys = createMemoryGladys({ devices: [{ features: [{ external_id: 'f' }] }] });
+  const order = [];
+  let release;
+  gladys.publishStates = async (states) => {
+    order.push(`start ${states[0].state}`);
+    if (states[0].state === 30) await new Promise((resolve) => (release = resolve));
+    order.push(`end ${states[0].state}`);
+    return { success: true };
+  };
+  const publisher = createStatePublisher({
+    gladys,
+    logger: silentLogger,
+    limits: { flushDelayMs: 1 },
+  });
+  publisher.set('f', 30);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  publisher.set('f', 80);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(order, ['start 30'], 'the second waits for the first');
+  release();
+  await publisher.drain();
+  assert.deepEqual(order, ['start 30', 'end 30', 'start 80', 'end 80']);
+  publisher.close();
+});

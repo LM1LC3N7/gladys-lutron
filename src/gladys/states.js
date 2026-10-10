@@ -58,24 +58,30 @@ export function createStatePublisher({ gladys, logger, limits = {}, now = Date.n
     return perMinute - sent.length;
   };
 
+  // One flush at a time: two requests in flight could reach Gladys in the
+  // wrong order and leave an old value (the newer one deduplicated after).
+  const run = () => {
+    flushing = flush().then((next) => {
+      flushing = null;
+      if (queue.size > 0) schedule(next);
+    });
+    return flushing;
+  };
+
   const schedule = (delay = flushDelayMs) => {
-    if (timer || closed) return;
+    if (timer || flushing || closed) return;
     timer = setTimeout(() => {
       timer = null;
-      flushing = flush().finally(() => {
-        flushing = null;
-      });
+      run();
     }, delay);
     timer.unref?.();
   };
 
+  /** @returns {Promise<number>} the delay before the next flush */
   async function flush() {
-    if (queue.size === 0) return;
+    if (queue.size === 0) return flushDelayMs;
     const available = budget();
-    if (available <= 0) {
-      schedule(Math.max(flushDelayMs, sent[0] + 60_000 - now()));
-      return;
-    }
+    if (available <= 0) return Math.max(flushDelayMs, sent[0] + 60_000 - now());
     const batch = [];
     for (const [externalId, value] of queue) {
       if (batch.length >= Math.min(batchSize, available)) break;
@@ -98,7 +104,7 @@ export function createStatePublisher({ gladys, logger, limits = {}, now = Date.n
       for (const [externalId] of batch) published.delete(externalId);
       logger.warn(`Could not publish ${batch.length} Lutron states: ${error.message}`);
     }
-    if (queue.size > 0) schedule();
+    return flushDelayMs;
   }
 
   return {
@@ -157,10 +163,7 @@ export function createStatePublisher({ gladys, logger, limits = {}, now = Date.n
       while (queue.size > 0 || timer || flushing) {
         clearTimeout(timer);
         timer = null;
-        flushing ??= flush().finally(() => {
-          flushing = null;
-        });
-        await flushing;
+        await (flushing ?? run());
         if (queue.size > 0 && budget() <= 0) return;
       }
     },

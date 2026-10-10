@@ -93,9 +93,37 @@ import { batteryLowOf, smartAwayOf } from './status.js';
  * @property {string[]} unknownTypes
  */
 
+/** A busy bridge (big project, firmware update) gets a second, longer chance. */
+export const SLOW_READ_TIMEOUT_MS = 10_000;
+
 /**
- * Read an endpoint a bridge may not have: absent (404, 204…) or silent gives
- * null; a closed connection still fails the load.
+ * Read a part of the project a bridge may not have (scenes, occupancy,
+ * buttons…): an error status (404, 204…) means absent. A timeout is tried
+ * again once with a longer delay, then fails the load: the session retries
+ * it, instead of running a whole session without the Picos of a slow
+ * answer.
+ *
+ * @param {{ read(url: string, options?: object): Promise<any> }} connection
+ * @param {string} url
+ */
+export async function readListing(connection, url) {
+  try {
+    return await connection.read(url);
+  } catch (error) {
+    if (error instanceof LeapStatusError) return null;
+    if (!(error instanceof LeapTimeoutError)) throw error;
+  }
+  try {
+    return await connection.read(url, { timeoutMs: SLOW_READ_TIMEOUT_MS });
+  } catch (error) {
+    if (error instanceof LeapStatusError) return null;
+    throw error;
+  }
+}
+
+/**
+ * Read a value a bridge may not have (a status, a battery): absent (404,
+ * 204…) or silent gives null; a closed connection still fails.
  *
  * @param {{ read(url: string): Promise<any> }} connection
  * @param {string} url
@@ -205,7 +233,7 @@ export async function loadCasetaModel(connection, bridge) {
   }
 
   if (buttonDevices.length > 0) {
-    for (const button of (await readOptional(connection, '/button'))?.Buttons ?? []) {
+    for (const button of (await readListing(connection, '/button'))?.Buttons ?? []) {
       const id = idFromHref(button?.href);
       const owner = deviceOfGroup.get(idFromHref(button?.Parent?.href));
       if (!id || !owner || !Number.isInteger(button.ButtonNumber)) continue;
@@ -222,7 +250,7 @@ export async function loadCasetaModel(connection, bridge) {
   }
 
   const scenes = [];
-  for (const button of (await readOptional(connection, '/virtualbutton'))?.VirtualButtons ?? []) {
+  for (const button of (await readListing(connection, '/virtualbutton'))?.VirtualButtons ?? []) {
     const id = idFromHref(button?.href);
     // Unnamed virtual buttons belong to scene Picos, not to the user's scenes.
     if (id && button.IsProgrammed && typeof button.Name === 'string') {
@@ -231,7 +259,7 @@ export async function loadCasetaModel(connection, bridge) {
   }
 
   const occupancyGroups = [];
-  for (const group of (await readOptional(connection, '/occupancygroup'))?.OccupancyGroups ?? []) {
+  for (const group of (await readListing(connection, '/occupancygroup'))?.OccupancyGroups ?? []) {
     const id = idFromHref(group?.href);
     const sensorIds = (group?.AssociatedSensors ?? [])
       .map((sensor) => idFromHref(sensor?.OccupancySensor?.href))

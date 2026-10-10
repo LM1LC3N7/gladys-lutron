@@ -372,6 +372,17 @@ programming, battery answers of RA3 sensors.
   republishes the list.
 - A button press is never replayed when a device is created (it would fire
   the scenes again).
+- Independent review of milestones 4–8, fixed with regression tests:
+  "Refresh the devices" left the system "ready" on a closed connection
+  (`session.restart()` removed every close listener); two state requests
+  could be in flight at once and land in the wrong order (one flush at a
+  time now); a slow `/button` (or any part of the project) answer gave a
+  partial model for the whole session (retried once with 10 s, then the
+  load fails and is retried; same for timed-out subscriptions); our own
+  keypad press could fire `area_scene_activated` for another room (5 s
+  suppression is global now); a forget during an outage still reported it
+  (availability reset on every deliberate stop); subscriptions run 10 at a
+  time for big processors.
 - Store validator run from a clone of `GladysAssistant/integration-store`:
   passes (warnings: image not published yet, cover not on `main` yet).
 - Several bridges: not requested (question 5), stays out; documented

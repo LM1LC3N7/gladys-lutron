@@ -89,3 +89,24 @@ test('hidden device types: left out of the Discover tab, created ones keep worki
   await lutron.onSetValue({}, { external_id: 'ext:ext-test-lutron:zone:00000929:on' }, 0);
   assert.equal(bridge.requestsTo('/zone/1/commandprocessor').length, 1);
 });
+
+test('"Refresh the devices" on a silent bridge: the system goes offline (review finding)', async (t) => {
+  const { bridge, lutron } = await startIntegration(t);
+  bridge.silence();
+  await lutron.bridge.refresh();
+  assert.equal(lutron.system.ready, false, 'never "ready" on a closed connection');
+  await assert.rejects(
+    lutron.onSetValue({}, { external_id: 'ext:ext-test-lutron:zone:00000929:on' }, 1),
+    /not connected/,
+  );
+});
+
+test('forgetting the bridge during an outage cancels the offline report', async (t) => {
+  const { bridge, gladys, lutron } = await startIntegration(t);
+  bridge.silence();
+  bridge.dropClients();
+  await waitFor(() => !lutron.system.ready);
+  await lutron.bridge.forget();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.equal(gladys.callsOf('publishSceneEvent').length, 0);
+});

@@ -10,7 +10,7 @@
 import { serialToHex } from './bridgeInfo.js';
 import { BUTTON_KINDS, KINDS, ZONE_KINDS, kindOf } from './deviceTypes.js';
 import { idFromHref } from './framing.js';
-import { displayName, parseAreas, readBatteries, readOptional } from './model.js';
+import { displayName, parseAreas, readBatteries, readListing, readOptional } from './model.js';
 import { buttonName, isRaiseLower } from './picoModels.js';
 import { smartAwayOf } from './status.js';
 
@@ -50,7 +50,7 @@ export async function loadProcessorModel(connection, bridge) {
   const unknownTypes = new Set();
 
   for (const area of areas.values()) {
-    const zoneBody = await readOptional(connection, `/area/${area.id}/associatedzone`);
+    const zoneBody = await readListing(connection, `/area/${area.id}/associatedzone`);
     for (const zone of zoneBody?.Zones ?? []) {
       const id = idFromHref(zone?.href);
       const kind = kindOf(zone?.ControlType);
@@ -77,13 +77,13 @@ export async function loadProcessorModel(connection, bridge) {
       });
     }
 
-    const stations = await readOptional(connection, `/area/${area.id}/associatedcontrolstation`);
+    const stations = await readListing(connection, `/area/${area.id}/associatedcontrolstation`);
     for (const station of stations?.ControlStations ?? []) {
       for (const ganged of station?.AssociatedGangedDevices ?? []) {
         const deviceId = idFromHref(ganged?.Device?.href);
         const type = ganged?.Device?.DeviceType;
         if (!deviceId || !BUTTON_KINDS.includes(kindOf(type))) continue;
-        const groups = await readOptional(connection, `/device/${deviceId}/buttongroup/expanded`);
+        const groups = await readListing(connection, `/device/${deviceId}/buttongroup/expanded`);
         const buttons = (groups?.ButtonGroupsExpanded ?? [])
           .flatMap((group) => group?.Buttons ?? [])
           .filter((button) => idFromHref(button?.href) && Number.isInteger(button.ButtonNumber))
@@ -99,7 +99,7 @@ export async function loadProcessorModel(connection, bridge) {
           })
           .sort((a, b) => a.number - b.number);
         if (buttons.length === 0) continue;
-        const device = (await readOptional(connection, `/device/${deviceId}`))?.Device ?? {};
+        const device = (await readListing(connection, `/device/${deviceId}`))?.Device ?? {};
         const deviceName = typeof device.Name === 'string' ? device.Name : '';
         const stationName = typeof station.Name === 'string' ? station.Name : '';
         const kind = kindOf(type);
@@ -125,16 +125,14 @@ export async function loadProcessorModel(connection, bridge) {
       }
     }
 
-    for (const scene of areaScenesOf(
-      await readOptional(connection, `/area/${area.id}/areascene`),
-    )) {
+    for (const scene of areaScenesOf(await readListing(connection, `/area/${area.id}/areascene`))) {
       scenes.push({ ...scene, source: 'areascene', areaId: area.id, area: area.name });
     }
   }
 
   // Occupancy is reported per area: one group per area with sensors.
   const groups = new Map();
-  const devices = (await readOptional(connection, '/device?where=IsThisDevice:false'))?.Devices;
+  const devices = (await readListing(connection, '/device?where=IsThisDevice:false'))?.Devices;
   for (const device of devices ?? []) {
     if (kindOf(device?.DeviceType) !== KINDS.OCCUPANCY_SENSOR) continue;
     const deviceId = idFromHref(device.href);

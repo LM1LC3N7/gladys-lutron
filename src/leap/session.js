@@ -153,7 +153,8 @@ export class LeapSession extends EventEmitter {
     const connection = this.connection;
     this.connection = null;
     this.stopPing();
-    connection?.removeAllListeners('close');
+    // handleClose() ignores it (no longer the current connection); other
+    // listeners (the Lutron system) must still learn it is closed.
     connection?.close();
     clearTimeout(this.retryTimer);
     this.retryTimer = null;

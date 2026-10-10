@@ -32,6 +32,8 @@ const REDISCOVER_INTERVAL_MS = 5 * 60_000;
  * @param {(connection: import('../leap/connection.js').LeapConnection, info: object) => Promise<void>} [options.onReady]
  *   loads the model and subscribes, after every (re)connection
  * @param {(status: object) => void} [options.onStatus] every session status change
+ * @param {() => void} [options.onStopped] a session was stopped on purpose (forget, new
+ *   address, new pairing, shutdown): not an outage
  * @param {(options: object) => LeapSession} [options.createSession]
  * @param {typeof pairBridge} [options.pair]
  * @param {number} [options.rediscoverIntervalMs]
@@ -43,6 +45,7 @@ export function createBridgeController({
   logger,
   onReady = async () => {},
   onStatus = () => {},
+  onStopped = () => {},
   createSession = (options) => new LeapSession(options),
   pair = pairBridge,
   rediscoverIntervalMs = REDISCOVER_INTERVAL_MS,
@@ -88,7 +91,10 @@ export function createBridgeController({
     const current = session;
     session = null;
     info = null;
-    if (current) await current.stop();
+    if (current) {
+      await current.stop();
+      onStopped();
+    }
   };
 
   const startSession = () => {

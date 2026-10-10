@@ -279,13 +279,17 @@ export class LeapConnection extends EventEmitter {
    * Request expecting a 2xx answer; follows Header.Paging like pylutron-caseta
    * and merges the pages of the first body collection.
    *
+   * @param {string} communiqueType
+   * @param {string} url
+   * @param {object} [body]
+   * @param {{ timeoutMs?: number }} [options] per request (default: requestTimeoutMs)
    * @returns {Promise<LeapResponse>}
    */
-  async call(communiqueType, url, body) {
+  async call(communiqueType, url, body, { timeoutMs } = {}) {
     const pages = [];
     let paging;
     do {
-      const response = await this.request(communiqueType, url, { body, paging });
+      const response = await this.request(communiqueType, url, { body, paging, timeoutMs });
       if (!isSuccess(response))
         throw new LeapStatusError(url, response.statusCode, response.status);
       pages.push(response);
@@ -302,9 +306,13 @@ export class LeapConnection extends EventEmitter {
     return first;
   }
 
-  /** @returns {Promise<any>} the body, null for "204 NoContent" */
-  async read(url) {
-    return (await this.call('ReadRequest', url)).body;
+  /**
+   * @param {string} url
+   * @param {{ timeoutMs?: number }} [options]
+   * @returns {Promise<any>} the body, null for "204 NoContent"
+   */
+  async read(url, options) {
+    return (await this.call('ReadRequest', url, undefined, options)).body;
   }
 
   /** @returns {Promise<any>} */
