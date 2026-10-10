@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log*
+.git
+.github
+.env
+.env.*
+data
+.data
+*.log
+.DS_Store
+README.md
+AUDIT.md
+TODO.md
+CLAUDE.md
+docs
+# Test-only TLS material (with private keys) never enters the build context.
+test

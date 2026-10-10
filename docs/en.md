@@ -1,0 +1,214 @@
+# Lutron for Gladys Assistant
+
+Control your Lutron lights, shades and fans from Gladys, and use your Pico
+remotes and keypads in Gladys scenes. Everything runs **on your local network**, over
+Lutron's LEAP protocol: no Lutron account, no cloud, no Internet connection
+needed by the integration.
+
+> **First version, being tested.** Everything below is implemented and
+> tested against simulated bridges; it is being checked on real hardware
+> (Caséta first). Report anything odd with the Diagnostics button. Changes
+> are listed in the [changelog](../CHANGELOG.md).
+
+## Supported systems
+
+| System                                          | Status                    |
+| ----------------------------------------------- | ------------------------- |
+| Caséta Smart Hub (L-BDG2, sold in starter kits) | supported                 |
+| Caséta Smart Bridge PRO (L-BDGPRO2)             | supported                 |
+| RA2 Select (RR-SEL-REP2)                        | supported                 |
+| RadioRA 3, HomeWorks QSX                        | supported, testers wanted |
+| Original Smart Bridge (L-BDG, before LEAP)      | not supported             |
+| RadioRA 2, HomeWorks QS (telnet)                | not supported             |
+
+Devices: dimmers (Caséta, Diva, Sunnata, plug-in, in-line), switches and
+plug-in modules, relays, shades, drapes and wood blinds, fan controls,
+occupancy sensors, Pico remotes; on RadioRA 3 and HomeWorks QSX also
+keypads with their LEDs, tunable white and colour lights (Ketra, Lumaris).
+
+## What stays local, what does not
+
+- **Gladys ↔ bridge: 100 % local.** Pairing, discovery, control and events
+  go straight from Gladys to the bridge on your network. They keep working
+  when the Internet is down.
+- **Adding devices to the bridge** is done once in the Lutron app, which
+  asks for a Lutron account. This is Lutron's own setup, outside Gladys.
+  After that, the integration never needs the app nor the Internet. A Pico
+  remote can also be paired directly to a dimmer, without any app.
+
+## Installation
+
+1. Plug the bridge into your router with its network cable and add your
+   devices to it in the Lutron app.
+2. Give the bridge a **fixed IP address** (a DHCP reservation in your
+   router) so Gladys always finds it.
+3. In Gladys, install the **Lutron** integration, open its configuration.
+4. Leave the IP address empty (the bridge is searched on your network) or
+   type it, then click **Pair the bridge**.
+5. Within 60 seconds, press the **small black button at the back of the
+   bridge**. The status turns to "Connected".
+6. Open the **Discover** tab and create the devices you want.
+
+If the search finds nothing, type the IP address: some networks (VLANs,
+mesh Wi-Fi, Docker installs) block the discovery announcements, not the
+connection itself.
+
+## Devices
+
+Each Lutron device becomes a Gladys device named after its Lutron room
+("Living room Ceiling"), ready to place in the matching Gladys room:
+
+| Lutron                          | In Gladys                                                            |
+| ------------------------------- | -------------------------------------------------------------------- |
+| Dimmer (Diva, Caséta, Sunnata…) | Light: on/off and brightness                                         |
+| Tunable white, colour light     | Light: also colour temperature (K), colour, and a "Warm dim" switch  |
+| Switch, plug-in module, relay   | Switch: on/off                                                       |
+| Fan control                     | Fan: speed in % (0 off, 25 low, 50 medium, 75 medium-high, 100 high) |
+| Shade, roller, honeycomb        | Shutter: open / close / stop and position                            |
+| Drape                           | Curtain: open / close / stop and position                            |
+| Tilt-only wood blind            | Shutter: the position tilts the slats (50 = open, 0 = closed)        |
+| Occupancy sensors of a room     | Presence: occupied / free                                            |
+| Lutron scene (Caséta)           | Push button "Activate"                                               |
+| Bridge                          | Switch "Smart Away"                                                  |
+| Keypad (RadioRA 3, QSX)         | One button per key (its engraving) and one switch per LED            |
+| Battery shade or sensor         | "Battery low" (Lutron only says good or low)                         |
+
+"On" brings a light back to its last level. States follow the bridge in
+real time, are read again every 15 minutes and after every reconnection.
+The device badge says "local", or "unreachable" when the bridge has not
+answered for 2 minutes.
+
+## Pico remotes
+
+Each Pico becomes a Gladys device with one button per physical button (On,
+Off, Raise, Lower, Favorite…). In a scene, use the trigger **"Device state
+change"**, pick the button and the press type.
+
+The option **Pico remote buttons** sets how presses are detected:
+
+- **Instant**: a click is reported the moment you press, with no delay.
+  Double clicks and long presses are not detected.
+- **Normal** (default): click, double click and long press are detected. A
+  single click is reported about 0.3 s later, the time to make sure no
+  second press follows.
+- **Slow**: like Normal, with wider timings (0.45 s for a double click,
+  0.75 s for a long press), for people who press slowly.
+
+Examples with the trigger "Device state change" on a Pico button:
+
+| Button and press type                                | Scene                             |
+| ---------------------------------------------------- | --------------------------------- |
+| "On", **Click**                                      | turn the living room lights on    |
+| "On", **Double click**                               | activate the "Cinema" scene       |
+| "Off", **Long press**                                | turn every light of the house off |
+| "Raise", **Long press** then **Long press released** | start, then stop, a dimming loop  |
+
+Raise and Lower repeat while held, so their long press is detected 0.25 s
+later than the other buttons: a short press on them stays a click. Two
+identical clicks in a row are two events: each one starts the scene. The
+Pico reports no battery level (Lutron does not send it).
+
+## Keypads (RadioRA 3, HomeWorks QSX)
+
+Each keypad becomes a Gladys device: its keys are buttons like the Pico ones
+(named after their engraving), and each LED a switch. A key runs its Lutron
+programming as usual; Gladys sees the press. An LED follows the keypad
+programming: Lutron may switch it back right after Gladys changes it (an
+LED tracks its scene or its zones).
+
+- Action **"Lutron: press a keypad button"** (keypad, engraving or number)
+  presses a key as a finger would, which runs its Lutron programming. A
+  Caséta bridge cannot do it with a Pico: control the light or the scene
+  directly.
+- Trigger **"Lutron: room scene activated"** fires when a room scene
+  changes (keypad, app, timeclock), with the room and scene names as
+  variables and as optional filters. Not fired for a key pressed by Gladys
+  itself.
+
+## Scenes
+
+Lutron devices work with the usual Gladys scene blocks: "Device state
+change" as a trigger (Pico presses, occupancy, Smart Away, low battery),
+"Control a device" as an action (lights, shades, fans, Lutron scenes). The
+integration only adds what these blocks cannot do:
+
+- action **"Lutron: set a level with a fade"**: a dimmer reaches a level
+  over a chosen time, up to 4 hours (a sunrise in the bedroom, a slow
+  dimming for a film); 0 turns it off;
+- action **"Lutron: tilt the slats"**: the slats of a blind with lift and
+  tilt (Gladys has no tilt control);
+- triggers **"Lutron: bridge offline"** (no answer for 2 minutes: power cut,
+  network, reset; variable "Reason") and **"Lutron: bridge back online"**
+  (variable "Offline duration").
+
+**Default fade time** (configuration) applies to every level Gladys sends
+to a dimmer; 0 keeps the dimmer's own fade.
+
+## Dashboard widget
+
+The **Lutron overview** widget shows what the device boxes cannot: the
+bridge and its connection, Smart Away, the number of devices, the occupied
+rooms, the low batteries and the last Pico presses (remote, button, press
+type, time). Its buttons switch Smart Away on or off, and reconnect the
+bridge when it is offline. To control the lights of a room, use the core
+room box.
+
+## Good to know
+
+- Occupancy is reported per room (all its sensors together); the delay
+  before "free" is set on the sensor itself.
+- Lutron does not publish LEAP: a firmware update of the bridge may change
+  it. Report any problem with the Diagnostics button.
+- Native "hold" and "multi-tap" events depend on the system (RadioRA 3 and
+  HomeWorks programmings): on Caséta, the integration detects double clicks
+  and long presses itself.
+- Pairing can fail on a network using jumbo frames: pair from a standard
+  network.
+
+## Options
+
+- **Pico remote buttons**: how presses are detected (see "Pico remotes").
+- **Default fade time**: see "Scenes".
+- **Hide from the Discover tab**: device types you do not want to create
+  in Gladys (Picos you only use with Lutron, scenes, Smart Away…). Devices
+  already created keep working.
+
+One bridge per Gladys for now.
+
+## Security
+
+The bridge only accepts Gladys after the button press. The certificate it
+signs is stored in the Gladys configuration (included in the Gladys backups,
+never shown in the interface), and every connection checks the bridge's
+certificate: another machine cannot pretend to be your bridge.
+
+## Troubleshooting
+
+- **"Button not pressed in time"**: click Pair again, then press the bridge
+  button within 60 seconds.
+- **"Certificate refused"**: the bridge was reset. Click **Forget the
+  bridge**, then pair again.
+- **States not updating**: click **Test the connection**; the integration
+  also reconnects and reloads every state by itself.
+- **To report a problem**: see "Diagnostics" below.
+
+## Diagnostics
+
+The **Diagnostics** button reads the description of your Lutron system from
+the bridge (rooms, devices, buttons, scenes, current levels) and writes it to
+the integration logs. It only reads: nothing is changed on the bridge.
+
+1. Click **Diagnostics** (it takes a few seconds, up to a minute on a big
+   system).
+2. Open the **Logs** tab of the integration.
+3. Copy every line from `LUTRON DIAGNOSTICS BEGIN` to
+   `LUTRON DIAGNOSTICS END` and attach it to your report.
+
+The dump is anonymized: serial numbers are replaced by `serial-1`,
+`serial-2`…, MAC and IP addresses and any geographic position are masked,
+and no certificate or key is ever included. Room and device names are kept,
+since they explain your setup; rename them in the dump if you prefer. When
+the bridge is not connected, only the connection state is written.
+
+Not affiliated with Lutron Electronics. Lutron, Caséta, Pico, RadioRA and
+HomeWorks are trademarks of Lutron Electronics Co., Inc.

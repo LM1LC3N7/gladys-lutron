@@ -1,0 +1,23 @@
+# Weekly update proposals: the GitHub Actions (pinned by commit SHA in the
+# workflows), the npm dependencies and the Docker base image. Every proposal
+# goes through CI. The Gladys SDK is pre-1.0: review its bumps by hand.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-dependencies:
+        dependency-type: development
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
