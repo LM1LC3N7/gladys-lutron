@@ -110,6 +110,34 @@ test('index.js: connection status, scan, actions, clean shutdown', async (t) => 
     Parameter: [{ Type: 'Level', Value: 75 }],
   });
 
+  // The scene action and the widget, through the real wire.
+  const scene = await gladys.command('scene-action.run', {
+    key: 'set_level_with_fade',
+    fields: { device: DIMMER, level: 20, fade_seconds: 60 },
+  });
+  assert.equal(scene.success, true, scene.error);
+  assert.deepEqual(bridge.requestsTo('/zone/1/commandprocessor').at(-1).Body.Command, {
+    CommandType: 'GoToDimmedLevel',
+    DimmedLevelParameters: { Level: 20, FadeTime: '00:01:00' },
+  });
+  const refused = await gladys.command('scene-action.run', {
+    key: 'set_tilt',
+    fields: { device: DIMMER, tilt: 50 },
+  });
+  assert.equal(refused.success, false);
+  assert.match(JSON.stringify(refused), /not a blind/);
+  const widget = await gladys.command('widget.get', {
+    key: 'lutron_overview',
+    settings: {},
+    language: 'fr',
+    units: 'metric',
+  });
+  assert.equal(widget.success, true, widget.error);
+  assert.deepEqual(
+    widget.data.content.components.map((c) => c.type),
+    ['text', 'status', 'text', 'button'],
+  );
+
   // 4. Configuration actions.
   const test1 = await gladys.command('action.run', { key: 'test_connection', fields: {} });
   assert.equal(test1.success, true, test1.error);

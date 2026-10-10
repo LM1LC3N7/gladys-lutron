@@ -112,12 +112,48 @@ deux événements : chacun lance la scène. La Pico n'indique pas le niveau de
 sa pile (Lutron ne le transmet pas). Les noms des boutons restent en anglais
 (On, Off, Favorite, Raise, Lower…), comme sur la télécommande.
 
-## Durée de fondu
+## Scènes
 
-La **durée de fondu par défaut** s'applique à chaque niveau envoyé par
-Gladys à un variateur. L'action de scène **« Lutron : régler un niveau avec
-fondu »** amène un variateur à un niveau en un temps choisi, jusqu'à 4
-heures (un réveil progressif, une baisse lente pour un film).
+Les appareils Lutron s'utilisent avec les blocs de scène habituels de
+Gladys : « Changement d'état de l'appareil » comme déclencheur (appuis sur
+les Pico, présence, Smart Away, pile faible), « Contrôler un appareil »
+comme action (lumières, stores, ventilateurs, scènes Lutron). L'intégration
+n'ajoute que ce que ces blocs ne savent pas faire :
+
+- action **« Lutron : régler un niveau avec fondu »** : un variateur atteint
+  un niveau en un temps choisi, jusqu'à 4 heures (un réveil progressif, une
+  baisse lente pour un film) ; 0 l'éteint ;
+- action **« Lutron : orienter les lames »** : les lames d'un store qui a
+  montée et inclinaison (Gladys n'a pas de réglage d'inclinaison) ;
+- déclencheurs **« Lutron : bridge hors ligne »** (pas de réponse depuis
+  2 minutes : coupure de courant, réseau, réinitialisation ; variable
+  « Raison ») et **« Lutron : bridge de retour en ligne »** (variable
+  « Durée hors ligne »).
+
+La **durée de fondu par défaut** (configuration) s'applique à chaque niveau
+envoyé par Gladys à un variateur ; 0 garde le fondu propre au variateur.
+
+## Widget du tableau de bord
+
+Le widget **Aperçu Lutron** montre ce que les boîtes d'appareils ne
+montrent pas : le bridge et sa connexion, Smart Away, le nombre
+d'appareils, les pièces occupées, les piles faibles et les derniers appuis
+sur les Pico (télécommande, bouton, type d'appui, heure). Ses boutons
+activent ou arrêtent Smart Away, et reconnectent le bridge quand il est
+hors ligne. Pour piloter les lumières d'une pièce, utilisez la boîte pièce
+de Gladys.
+
+## Bon à savoir
+
+- La présence est indiquée par pièce (tous ses détecteurs ensemble) ; le
+  délai avant « libre » se règle sur le détecteur lui-même.
+- Lutron ne publie pas LEAP : une mise à jour du bridge peut le modifier.
+  Signalez tout problème avec le bouton Diagnostic.
+- Les événements natifs « maintien » et « multi-appui » dépendent du
+  système (programmations RadioRA 3 et HomeWorks) : sur Caséta,
+  l'intégration détecte elle-même doubles clics et appuis longs.
+- L'association peut échouer sur un réseau en « jumbo frames » : associez
+  depuis un réseau standard.
 
 ## Sécurité
 

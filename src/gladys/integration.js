@@ -1,7 +1,8 @@
 // -----------------------------------------------------------------------------
 // The Lutron integration, seen from Gladys: ties the bridge controller (pairing,
 // session), the live Lutron system (model, states, commands) and the Gladys
-// surfaces (Discover tab, states, commands, transports, scene triggers).
+// surfaces (Discover tab, states, commands, transports, scene triggers and
+// actions, dashboard widget).
 // index.js only registers these handlers on the SDK.
 // -----------------------------------------------------------------------------
 
@@ -12,9 +13,11 @@ import { createAvailability } from './availability.js';
 import { createBridgeController } from './bridgeController.js';
 import { createCommandHandler } from './commands.js';
 import { BUTTON_VALUES, buildCatalog, zoneValues } from './devices.js';
-import { SCENE_TRIGGERS } from './keys.js';
-import { bridgeLabel, describeSession } from './messages.js';
+import { SCENE_TRIGGERS, WIDGETS } from './keys.js';
+import { MESSAGES, bridgeLabel, describeSession } from './messages.js';
+import { createSceneActions } from './sceneActions.js';
 import { createStatePublisher } from './states.js';
+import { WIDGET_ACTIONS, buildOverview } from './widget.js';
 
 const TRANSPORT_BATCH = 100;
 const RECENT_PRESSES = 8;
@@ -56,6 +59,16 @@ export function createLutronIntegration({
     onReady: (connection, info) => system.attach(connection, info),
     ...controllerOptions,
   });
+
+  // "The data changed": the core re-pulls the widget (it drops nudges
+  // closer than 10 s apart).
+  const refreshWidget = () => {
+    try {
+      gladys.requestWidgetRefresh?.(WIDGETS.OVERVIEW);
+    } catch (error) {
+      logger.debug(`Widget refresh nudge failed: ${error.message}`);
+    }
+  };
 
   const ourDevices = () => {
     const ids = new Set(catalog?.devices.map((device) => device.external_id) ?? []);
@@ -120,6 +133,7 @@ export function createLutronIntegration({
     publishTransports(ourDevices(), false);
     availability.online();
     for (const externalId of catalog.batterySources.keys()) publishBattery(externalId);
+    refreshWidget();
   });
 
   system.on('zone', (zone, state) => {
@@ -132,10 +146,12 @@ export function createLutronIntegration({
   system.on('occupancy', (group, occupied) => {
     const externalId = catalog?.occupancyFeatures.get(group.id)?.occupancy;
     if (externalId && occupied !== null) publisher.set(externalId, occupied ? 1 : 0);
+    refreshWidget();
   });
 
   system.on('smartAway', (enabled) => {
     if (catalog?.smartAwayFeature) publisher.set(catalog.smartAwayFeature, enabled ? 1 : 0);
+    refreshWidget();
   });
 
   system.on('battery', (deviceId) => {
@@ -158,6 +174,7 @@ export function createLutronIntegration({
       });
       recentPresses.length = Math.min(recentPresses.length, RECENT_PRESSES);
       publisher.publishEvent(externalId, BUTTON_VALUES[press]);
+      refreshWidget();
     },
   });
 
@@ -167,9 +184,40 @@ export function createLutronIntegration({
 
   system.on('offline', () => {
     tracker.reset();
+    refreshWidget();
     // A session still alive will reconnect; none means a deliberate stop.
     if (bridge.session) availability.lost();
   });
+
+  const sceneActions = createSceneActions({ system, catalog: () => catalog });
+
+  const overview = () => {
+    const model = system.model;
+    const status = bridge.session?.status();
+    const occupiedAreas = (model?.occupancyGroups ?? [])
+      .filter((group) => system.occupancy.get(group.id) === true)
+      .map((group) => group.area ?? group.name);
+    const batteryDevices = [
+      ...(model?.zones ?? []).filter((zone) => zone.battery).map((zone) => zone.deviceId),
+      ...(model?.occupancyGroups ?? []).flatMap((group) => group.sensorDeviceIds),
+    ].filter((deviceId) => system.batteries.has(deviceId));
+    return buildOverview({
+      paired: Boolean(config.credentials),
+      connected: system.ready,
+      label: bridgeLabel(bridge.info ?? model?.bridge ?? null),
+      leapVersion: status?.leapVersion ?? null,
+      statusMessage: status ? describeSession(status, bridge.info).message : MESSAGES.notPaired,
+      smartAwaySupported: Boolean(model?.smartAway),
+      smartAway: system.smartAway,
+      devices: catalog?.devices.length ?? 0,
+      occupiedAreas,
+      lowBatteries:
+        batteryDevices.length > 0
+          ? new Set(batteryDevices.filter((deviceId) => system.batteries.get(deviceId))).size
+          : null,
+      recentPresses,
+    });
+  };
 
   return {
     bridge,
@@ -202,6 +250,37 @@ export function createLutronIntegration({
       fadeSeconds: () => config.defaultFadeSeconds,
       publisher,
     }),
+
+    /** Scene action "Lutron: set a level with a fade". */
+    setLevelWithFade: (fields) => sceneActions.setLevelWithFade(fields),
+
+    /** Scene action "Lutron: tilt the slats". */
+    setTilt: (fields) => sceneActions.setTilt(fields),
+
+    /** The "Lutron overview" widget content. */
+    getOverview: () => overview(),
+
+    /** A button of the widget. */
+    async onWidgetAction(actionKey) {
+      switch (actionKey) {
+        case WIDGET_ACTIONS.SMART_AWAY_ON:
+        case WIDGET_ACTIONS.SMART_AWAY_OFF: {
+          const enabled = actionKey === WIDGET_ACTIONS.SMART_AWAY_ON;
+          await system.setSmartAwayEnabled(enabled);
+          refreshWidget();
+          return enabled
+            ? { en: 'Smart Away is on.', fr: 'Smart Away est activé.' }
+            : { en: 'Smart Away is off.', fr: 'Smart Away est désactivé.' };
+        }
+        case WIDGET_ACTIONS.RECONNECT: {
+          const message = await bridge.testConnection();
+          refreshWidget();
+          return message;
+        }
+        default:
+          throw new Error(`Unknown widget action "${actionKey}"`);
+      }
+    },
 
     /** A device was just created: give it its current states and badge. */
     async onDeviceCreated(device) {

@@ -44,3 +44,9 @@ All notable changes to this project are documented here. The format follows
   release, usable in the core "device state" trigger. Detection mode
   Instant / Normal / Slow from the configuration; raise / lower buttons wait
   a little longer before a long press.
+- Scene actions "Lutron: set a level with a fade" (up to 4 hours) and
+  "Lutron: tilt the slats"; scene triggers "Lutron: bridge offline" (after
+  2 minutes without answer) and "Lutron: bridge back online".
+- Dashboard widget "Lutron overview": bridge and connection, Smart Away,
+  devices, occupied rooms, low batteries, the last Pico presses, and
+  buttons for Smart Away and reconnection.

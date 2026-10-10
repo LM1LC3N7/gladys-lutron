@@ -3,53 +3,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LeapSession } from '../src/leap/session.js';
-import { createLutronIntegration } from '../src/gladys/integration.js';
-import { ok, startFakeBridge } from './helpers/fakeBridge.js';
-import { createMemoryGladys, silentLogger } from './helpers/memoryGladys.js';
-import { casetaRoutes } from './helpers/pylutronBridge.js';
-import { CREDENTIALS } from './helpers/tls.js';
+import { startIntegration } from './helpers/integration.js';
 import { waitFor } from './helpers/waitFor.js';
-
-const PAIRED = {
-  bridge_host: '127.0.0.1',
-  leap_key: CREDENTIALS.key,
-  leap_cert: CREDENTIALS.cert,
-  leap_ca: CREDENTIALS.ca,
-};
-
-export async function startIntegration(t, { routes = casetaRoutes(), devices, options = {} } = {}) {
-  const bridge = await startFakeBridge({
-    routes: {
-      ...routes,
-      '/device?where=IsThisDevice:true': () =>
-        ok({ Devices: [{ Name: 'Smart Bridge', ModelNumber: 'L-BDG2-WH', SerialNumber: 1234 }] }),
-    },
-  });
-  t.after(() => bridge.close());
-  const gladys = createMemoryGladys({ config: { ...PAIRED }, devices });
-  const lutron = createLutronIntegration({
-    gladys,
-    logger: silentLogger,
-    version: 'test',
-    ports: { leap: bridge.port },
-    controllerOptions: {
-      createSession: (o) =>
-        new LeapSession({
-          ...o,
-          connectionOptions: { ...o.connectionOptions, requestTimeoutMs: 150 },
-          timings: { reconnectMinMs: 20, reconnectMaxMs: 40 },
-        }),
-    },
-    publisherLimits: { flushDelayMs: 1 },
-    offlineAfterMs: 60,
-    ...options,
-  });
-  t.after(() => lutron.close());
-  await lutron.applyConfig(gladys.config);
-  await waitFor(() => lutron.system.ready, { what: 'the model' });
-  return { bridge, gladys, lutron };
-}
 
 test('connected: the project in the Discover tab, states once the devices are created', async (t) => {
   const { gladys, lutron } = await startIntegration(t);

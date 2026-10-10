@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DETECTION_TIMINGS, PRESSES, createButtonTracker } from '../src/leap/buttonTracker.js';
 import { BUTTON_NAMES, buttonName, isRaiseLower } from '../src/leap/picoModels.js';
-import { startIntegration } from './integration.test.js';
+import { startIntegration } from './helpers/integration.js';
 import { casetaRoutes } from './helpers/pylutronBridge.js';
 import { waitFor } from './helpers/waitFor.js';
 

@@ -26,7 +26,7 @@ The research behind every choice is in [AUDIT.md](./AUDIT.md).
 - [x] **Milestone 3 — pairing, discovery, configuration UX**
 - [x] **Milestone 4 — Caséta / RA2 Select model, devices, states, commands**
 - [x] **Milestone 5 — Pico remotes and buttons (click, double, long)**
-- [ ] **Milestone 6 — scene actions, scene triggers, dashboard widget →
+- [x] **Milestone 6 — scene actions, scene triggers, dashboard widget →
       release 0.1.0**
 - [ ] **Milestone 7 — RadioRA 3 / HomeWorks QSX, keypads, LEDs, colour →
       release 0.2.0**
@@ -297,27 +297,33 @@ pylutron-caseta), `MessageBodyType` values, the battery answer of a sensor.
 Still to check on the maintainer's Pico: the event sequence of a real
 press (Press / Release only on Caséta?), and the timings in practice.
 
-## Milestone 6 — scene actions, triggers, widget → release 0.1.0
+## Milestone 6 — scene actions, triggers, widget (done)
 
-- [ ] Scene actions `set_level_with_fade` and `set_tilt` (refused with a
-      clear message on a device that cannot do it).
-- [ ] Scene triggers `bridge_offline` / `bridge_online`: one event per
-      transition, after the reconnection attempts of the first 2 minutes
-      (no flapping), never during the start-up.
-- [ ] Widget `lutron_overview` (≤ 8 components, answered within 15 s even
-      when the bridge is down):
-  - caption: bridge model, connection, LEAP version;
-  - status list: connection, Smart Away, devices, occupied areas, shades
-    with a low battery;
-  - card list: the last button presses (remote, button, press type, time),
-    which no core box shows;
-  - buttons: Smart Away on/off (bound to the bridge feature), "Reconnect"
-    while offline.
-- [ ] Widget rejected on purpose: per-area light or shade controls (the
-      core room box already does it).
-- [ ] Docs `en`/`fr` complete (pairing, discovery, Docker networks, button
-      modes, examples, pitfalls of AUDIT.md §6), CHANGELOG, release 0.1.0,
-      repository topic `gladys-assistant-integration`.
+- `src/gladys/sceneActions.js`: `set_level_with_fade` (lights only, level
+  0–100, fade 0–4 h, default 2 s) and `set_tilt` (lift+tilt and tilt-only
+  blinds); a device that cannot do it, an unknown device, a missing value
+  or an offline bridge are refused with a message saying why.
+- `src/gladys/availability.js` (milestone 4) drives `bridge_offline`
+  (`bridge_name`, `reason`) and `bridge_online` (`bridge_name`,
+  `offline_seconds`): one event per transition, after 2 minutes without a
+  working connection, never before the first connection nor after a
+  deliberate stop (forget, new address, shutdown).
+- `src/gladys/widget.js`, `lutron_overview` built from memory (answers at
+  once even offline): caption (bridge, LEAP version); status (bridge,
+  Smart Away, devices, occupied rooms, low batteries); card list of the
+  last 8 presses; buttons Smart Away on/off (widget actions, so it works
+  without the bridge device created) and "Reconnect" while offline. The
+  core is nudged (`requestWidgetRefresh`) on presses, occupancy, Smart Away
+  and connection changes. Content checked with the SDK's
+  `validateWidgetContent`.
+- Rejected on purpose: per-room light or shade controls (core room box).
+- Docs `en`/`fr`: scenes, widget, "good to know" (AUDIT.md §6 pitfalls).
+
+Release: run the **Release** workflow (minor) from GitHub Actions once the
+maintainer has validated the integration on their hardware; it bumps
+`package.json` and the manifest, turns "Unreleased" into the version and
+publishes the image. Add the `gladys-assistant-integration` topic to the
+repository.
 
 ## Milestone 7 — RadioRA 3 / HomeWorks QSX → release 0.2.0
 

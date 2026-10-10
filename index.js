@@ -11,7 +11,6 @@ import { readFileSync } from 'node:fs';
 import { GladysIntegration, logger } from '@gladysassistant/integration-sdk';
 import { createLutronIntegration } from './src/gladys/integration.js';
 import { MANIFEST_ACTIONS, SCENE_ACTIONS, WIDGETS } from './src/gladys/keys.js';
-import { MESSAGES } from './src/gladys/messages.js';
 
 // Development only: a fake bridge on other ports (the TLS checks stay on).
 const port = (name) => Number.parseInt(process.env[name] ?? '', 10) || undefined;
@@ -27,9 +26,6 @@ const lutron = createLutronIntegration({
 });
 const { bridge } = lutron;
 
-// Surfaces of later milestones (TODO.md) answer explicitly meanwhile.
-const notYet = MESSAGES.notAvailableYet;
-
 gladys.onConfigUpdated((raw) => lutron.applyConfig(raw));
 gladys.on('connected', () => lutron.applyConfig(gladys.config));
 
@@ -42,16 +38,12 @@ gladys.onAction(MANIFEST_ACTIONS.TEST_CONNECTION, () => bridge.testConnection())
 gladys.onAction(MANIFEST_ACTIONS.REFRESH_DEVICES, () => bridge.refresh());
 gladys.onAction(MANIFEST_ACTIONS.FORGET_BRIDGE, () => bridge.forget());
 gladys.onAction(MANIFEST_ACTIONS.DIAGNOSTICS, () => bridge.diagnostics());
-gladys.onSceneAction(SCENE_ACTIONS.SET_LEVEL_WITH_FADE, () => {
-  throw new Error(notYet.en);
-});
-gladys.onSceneAction(SCENE_ACTIONS.SET_TILT, () => {
-  throw new Error(notYet.en);
-});
-gladys.onWidgetGet(WIDGETS.OVERVIEW, () => ({
-  ttl_seconds: 300,
-  components: [{ type: 'text', variant: 'caption', text: notYet.en }],
-}));
+gladys.onSceneAction(SCENE_ACTIONS.SET_LEVEL_WITH_FADE, (fields) =>
+  lutron.setLevelWithFade(fields),
+);
+gladys.onSceneAction(SCENE_ACTIONS.SET_TILT, (fields) => lutron.setTilt(fields));
+gladys.onWidgetGet(WIDGETS.OVERVIEW, () => lutron.getOverview());
+gladys.onWidgetAction(WIDGETS.OVERVIEW, (actionKey) => lutron.onWidgetAction(actionKey));
 
 gladys.handleShutdown(async (signal) => {
   logger.info(`Received ${signal} -> graceful shutdown`);

@@ -104,12 +104,45 @@ later than the other buttons: a short press on them stays a click. Two
 identical clicks in a row are two events: each one starts the scene. The
 Pico reports no battery level (Lutron does not send it).
 
-## Fade time
+## Scenes
 
-**Default fade time** applies to every level Gladys sends to a dimmer. The
-scene action **"Lutron: set a level with a fade"** sets a level over a
-chosen time, up to 4 hours (a sunrise in the bedroom, a slow dimming for a
-film).
+Lutron devices work with the usual Gladys scene blocks: "Device state
+change" as a trigger (Pico presses, occupancy, Smart Away, low battery),
+"Control a device" as an action (lights, shades, fans, Lutron scenes). The
+integration only adds what these blocks cannot do:
+
+- action **"Lutron: set a level with a fade"**: a dimmer reaches a level
+  over a chosen time, up to 4 hours (a sunrise in the bedroom, a slow
+  dimming for a film); 0 turns it off;
+- action **"Lutron: tilt the slats"**: the slats of a blind with lift and
+  tilt (Gladys has no tilt control);
+- triggers **"Lutron: bridge offline"** (no answer for 2 minutes: power cut,
+  network, reset; variable "Reason") and **"Lutron: bridge back online"**
+  (variable "Offline duration").
+
+**Default fade time** (configuration) applies to every level Gladys sends
+to a dimmer; 0 keeps the dimmer's own fade.
+
+## Dashboard widget
+
+The **Lutron overview** widget shows what the device boxes cannot: the
+bridge and its connection, Smart Away, the number of devices, the occupied
+rooms, the low batteries and the last Pico presses (remote, button, press
+type, time). Its buttons switch Smart Away on or off, and reconnect the
+bridge when it is offline. To control the lights of a room, use the core
+room box.
+
+## Good to know
+
+- Occupancy is reported per room (all its sensors together); the delay
+  before "free" is set on the sensor itself.
+- Lutron does not publish LEAP: a firmware update of the bridge may change
+  it. Report any problem with the Diagnostics button.
+- Native "hold" and "multi-tap" events depend on the system (RadioRA 3 and
+  HomeWorks programmings): on Caséta, the integration detects double clicks
+  and long presses itself.
+- Pairing can fail on a network using jumbo frames: pair from a standard
+  network.
 
 ## Security
 

@@ -43,6 +43,7 @@ import { KINDS } from '../leap/deviceTypes.js';
  * @property {Map<string, string[]>} batterySources battery-low feature external id -> device ids
  * @property {import('../leap/bridgeInfo.js').BridgeInfo} bridge
  * @property {Map<string, string>} buttonFeatures button id -> feature external id
+ * @property {Map<string, string>} zoneOfDevice device external id -> zone id
  * @property {string | null} smartAwayFeature
  * @property {Map<string, string>} deviceOfFeature feature external id -> device external id
  */
@@ -166,6 +167,7 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
     batterySources: new Map(),
     bridge: model.bridge,
     buttonFeatures: new Map(),
+    zoneOfDevice: new Map(),
     smartAwayFeature: null,
     deviceOfFeature: new Map(),
   };
@@ -216,6 +218,7 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
     });
     if (zone.battery) addBattery(ids, [zone.deviceId], features);
     catalog.zoneFeatures.set(zone.id, keys);
+    catalog.zoneOfDevice.set(ids.device, zone.id);
     addDevice(ids, {
       name: zone.name,
       model: zone.model ?? zone.type,

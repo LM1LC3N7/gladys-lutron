@@ -89,10 +89,6 @@ export const MESSAGES = Object.freeze({
     en: 'A diagnostic is already running.',
     fr: 'Un diagnostic est déjà en cours.',
   },
-  notAvailableYet: {
-    en: 'Not available yet in this development version.',
-    fr: 'Pas encore disponible dans cette version de développement.',
-  },
 });
 
 /**
