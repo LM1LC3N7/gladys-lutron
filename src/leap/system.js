@@ -11,18 +11,57 @@
 //   without the connection dropping (Home Assistant #128541).
 // - No Gladys here: the adapter (src/gladys/) listens to the events.
 //
+// Caséta / RA2 Select: unsolicited zone statuses, every zone read one by
+// one. RA3 / QSX: `/zone/status`, `/area/status` (occupancy and the active
+// area scene) and every keypad LED are subscribed.
+//
 // Events: 'model' (model), 'zone' (zone, state), 'occupancy' (group,
 // occupied), 'smartAway' (enabled), 'battery' (deviceId, low), 'button'
-// (device, button, event: Press | Release | MultiTap | LongHold), 'offline'.
+// (device, button, event: Press | Release | MultiTap | LongHold), 'led'
+// (ledId, on), 'areaScene' (scene, areaId), 'offline'.
 // Button events are only emitted once the model is loaded: a press during a
 // reload is dropped, never replayed late.
 // -----------------------------------------------------------------------------
 
 import { EventEmitter } from 'node:events';
-import { fanCommand, levelCommand, moveCommand, tiltCommand, pressCommand } from './commands.js';
+import { rgbToHueSaturation } from './color.js';
+import {
+  fanCommand,
+  hsvCommand,
+  kelvinCommand,
+  levelCommand,
+  moveCommand,
+  pressCommand,
+  tiltCommand,
+  warmDimCommand,
+} from './commands.js';
+import { KINDS } from './deviceTypes.js';
 import { BridgeOfflineError } from './errors.js';
-import { loadModel, readBatteries, readOptional } from './model.js';
-import { occupancyStatesOf, parseButtonEvent, smartAwayOf, zoneStatesOf } from './status.js';
+import { loadCasetaModel, readBatteries, readOptional } from './model.js';
+import { loadProcessorModel } from './processorModel.js';
+import {
+  areaStatesOf,
+  occupancyStatesOf,
+  parseButtonEvent,
+  parseLedStatus,
+  smartAwayOf,
+  zoneStatesOf,
+} from './status.js';
+
+/**
+ * The model of any Lutron system: Caséta / RA2 Select, or a processor.
+ *
+ * @param {{ read(url: string): Promise<any> }} connection
+ * @param {import('./bridgeInfo.js').BridgeInfo} bridge
+ */
+export function loadModel(connection, bridge) {
+  return bridge.system === 'caseta'
+    ? loadCasetaModel(connection, bridge)
+    : loadProcessorModel(connection, bridge);
+}
+
+/** A scene change right after our own keypad press is not the user's. */
+const OWN_COMMAND_MS = 5000;
 
 export const SYSTEM_TIMINGS = Object.freeze({
   resyncIntervalMs: 15 * 60_000,
@@ -62,6 +101,16 @@ export class LutronSystem extends EventEmitter {
     this.loggedTypes = new Set();
     /** @type {Map<string, { device: import('./model.js').ButtonDevice, button: import('./model.js').Button }>} */
     this.buttons = new Map();
+    /** @type {Map<string, boolean>} LED id -> on */
+    this.leds = new Map();
+    /** @type {Map<string, string | null>} area id -> active area scene id */
+    this.areaScenes = new Map();
+    /** @type {Map<string, number>} area id -> time of our last keypad press there */
+    this.ownPresses = new Map();
+  }
+
+  get processor() {
+    return Boolean(this.model && this.model.system !== 'caseta');
   }
 
   /** @param {string} zoneId */
@@ -81,6 +130,8 @@ export class LutronSystem extends EventEmitter {
     this.loading = true;
     this.zones.clear();
     this.occupancy.clear();
+    this.leds.clear();
+    this.areaScenes.clear();
     connection.on('unsolicited', (response) => this.receive(connection, response.body));
     connection.once('close', () => {
       if (this.connection !== connection) return;
@@ -128,13 +179,34 @@ export class LutronSystem extends EventEmitter {
         this.logger?.debug(`No subscription to ${url}: ${error.message}`);
       }
     };
-    if (model.occupancyGroups.length > 0) await optional('/occupancygroup/status');
+    if (model.system === 'caseta') {
+      if (model.occupancyGroups.length > 0) await optional('/occupancygroup/status');
+    } else {
+      await optional('/zone/status');
+      await optional('/area/status');
+      for (const ledId of this.ledIds()) await optional(`/led/${ledId}/status`);
+    }
     if (model.smartAway) await optional('/system/away/1/status');
     for (const buttonId of this.buttons.keys()) await optional(`/button/${buttonId}/status/event`);
   }
 
-  /** @private Read every zone status (Caséta pushes changes, never the initial state). */
+  /** @private */
+  ledIds() {
+    return [...this.buttons.values()].map(({ button }) => button.ledId).filter(Boolean);
+  }
+
+  /**
+   * @private Read every zone status (Caséta pushes changes, never the
+   * initial state); a processor answers them all at once.
+   */
   async readStates(connection, model) {
+    if (model.system !== 'caseta') {
+      const all = await readOptional(connection, '/zone/status');
+      if (all) {
+        this.receive(connection, all);
+        return;
+      }
+    }
     for (const zone of model.zones) {
       this.receive(connection, await readOptional(connection, `/zone/${zone.id}/status`));
     }
@@ -147,7 +219,12 @@ export class LutronSystem extends EventEmitter {
     if (!this.ready || !connection || !model) return;
     try {
       await this.readStates(connection, model);
-      if (model.occupancyGroups.length > 0) {
+      if (model.system !== 'caseta') {
+        this.receive(connection, await readOptional(connection, '/area/status'));
+        for (const ledId of this.ledIds()) {
+          this.receive(connection, await readOptional(connection, `/led/${ledId}/status`));
+        }
+      } else if (model.occupancyGroups.length > 0) {
         this.receive(connection, await readOptional(connection, '/occupancygroup/status'));
       }
       if (model.smartAway) {
@@ -198,11 +275,34 @@ export class LutronSystem extends EventEmitter {
       this.setOccupancy(groupId, occupied);
     const away = smartAwayOf(body);
     if (away !== null) this.setSmartAway(away);
+    for (const area of areaStatesOf(body)) {
+      if (area.occupied !== undefined) this.setOccupancy(area.areaId, area.occupied);
+      if (area.sceneId !== undefined) this.setAreaScene(area.areaId, area.sceneId);
+    }
+    const led = parseLedStatus(body);
+    if (led) this.applyLed(led.ledId, led.on);
     const press = parseButtonEvent(body);
     if (press && !this.loading) {
       const entry = this.buttons.get(press.buttonId);
       if (entry) this.emit('button', entry.device, entry.button, press.event);
     }
+  }
+
+  /** @private */
+  applyLed(ledId, on) {
+    this.leds.set(ledId, on);
+    if (!this.loading && this.model) this.emit('led', ledId, on);
+  }
+
+  /** @private Only a change, after the load, not caused by our own press. */
+  setAreaScene(areaId, sceneId) {
+    const previous = this.areaScenes.get(areaId);
+    this.areaScenes.set(areaId, sceneId);
+    if (this.loading || !this.model || previous === undefined || previous === sceneId) return;
+    if (!sceneId) return;
+    if (Date.now() - (this.ownPresses.get(areaId) ?? 0) < OWN_COMMAND_MS) return;
+    const scene = this.model.scenes.find((s) => s.source === 'areascene' && s.id === sceneId);
+    this.emit('areaScene', scene ?? { id: sceneId, name: `Scene ${sceneId}`, areaId }, areaId);
   }
 
   /** @private */
@@ -251,6 +351,7 @@ export class LutronSystem extends EventEmitter {
     }
     if (model.smartAway && this.smartAway !== null) this.emit('smartAway', this.smartAway);
     for (const [deviceId, low] of this.batteries) this.emit('battery', deviceId, low);
+    for (const [ledId, on] of this.leds) this.emit('led', ledId, on);
   }
 
   // --- commands ---------------------------------------------------------------
@@ -319,6 +420,68 @@ export class LutronSystem extends EventEmitter {
     const scene = this.model?.scenes.find((s) => s.id === sceneId);
     if (!scene) throw new Error(`Unknown Lutron scene ${sceneId}: refresh the devices`);
     return this.send(`/virtualbutton/${sceneId}/commandprocessor`, pressCommand());
+  }
+
+  /** @param {number} kelvin */
+  async setKelvin(zoneId, kelvin) {
+    const zone = this.requireZone(zoneId);
+    if (zone.kind !== KINDS.WHITE_TUNE && zone.kind !== KINDS.SPECTRUM) {
+      throw new Error(`${zone.name} has no colour temperature`);
+    }
+    const range = zone.whiteRange ?? { min: 1400, max: 10000 };
+    const value = Math.min(range.max, Math.max(range.min, Number(kelvin)));
+    return this.zoneCommand(zoneId, kelvinCommand(zone.kind, value));
+  }
+
+  /** @param {number} rgb integer 0xRRGGBB (the level stays) */
+  async setColor(zoneId, rgb) {
+    const zone = this.requireZone(zoneId);
+    if (zone.kind !== KINDS.SPECTRUM) throw new Error(`${zone.name} has no colour`);
+    const { hue, saturation } = rgbToHueSaturation(rgb);
+    return this.zoneCommand(zoneId, hsvCommand(hue, saturation));
+  }
+
+  /** @param {boolean} enabled */
+  async setWarmDim(zoneId, enabled) {
+    const zone = this.requireZone(zoneId);
+    if (zone.kind !== KINDS.WHITE_TUNE && zone.kind !== KINDS.SPECTRUM) {
+      throw new Error(`${zone.name} has no warm dimming`);
+    }
+    return this.zoneCommand(zoneId, warmDimCommand(zone.kind, enabled));
+  }
+
+  /**
+   * Press a keypad (or RA3 / QSX Pico) button, like a finger would. Caséta
+   * bridges cannot: their Picos only talk to the bridge.
+   *
+   * @param {string} buttonId
+   */
+  async pressButton(buttonId) {
+    const entry = this.buttons.get(buttonId);
+    if (!entry) throw new Error(`Unknown Lutron button ${buttonId}: refresh the devices`);
+    if (!this.processor) {
+      throw new Error(
+        'A Caséta bridge cannot press a Pico button: control the light or the scene directly',
+      );
+    }
+    if (entry.device.areaId) this.ownPresses.set(entry.device.areaId, Date.now());
+    return this.send(`/button/${buttonId}/commandprocessor`, pressCommand());
+  }
+
+  /**
+   * Keypad LED. The keypad programming may switch it back (an LED follows
+   * its scene or its zones).
+   *
+   * @param {string} ledId
+   * @param {boolean} on
+   */
+  async setLed(ledId, on) {
+    if (!this.ledIds().includes(ledId)) throw new Error(`Unknown Lutron LED ${ledId}`);
+    const connection = this.requireConnection();
+    const body = await connection.update(`/led/${ledId}/status`, {
+      LEDStatus: { State: on ? 'On' : 'Off' },
+    });
+    this.receive(connection, body);
   }
 
   /** @param {boolean} enabled */

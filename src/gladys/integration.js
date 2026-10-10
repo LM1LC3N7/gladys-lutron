@@ -154,6 +154,19 @@ export function createLutronIntegration({
     refreshWidget();
   });
 
+  system.on('led', (ledId, on) => {
+    const externalId = catalog?.ledFeatures.get(ledId);
+    if (externalId) publisher.set(externalId, on ? 1 : 0);
+  });
+
+  system.on('areaScene', (scene, areaId) => {
+    const area = system.model?.areas.get(areaId)?.name ?? scene.area ?? '';
+    logger.debug(`Lutron area scene: ${area} / ${scene.name}`);
+    gladys
+      .publishSceneEvent(SCENE_TRIGGERS.AREA_SCENE_ACTIVATED, { area, scene: scene.name })
+      .catch((error) => logger.warn(`Could not publish the area scene event: ${error.message}`));
+  });
+
   system.on('battery', (deviceId) => {
     for (const externalId of catalog?.batteryFeatures.get(deviceId) ?? [])
       publishBattery(externalId);
@@ -253,6 +266,9 @@ export function createLutronIntegration({
 
     /** Scene action "Lutron: set a level with a fade". */
     setLevelWithFade: (fields) => sceneActions.setLevelWithFade(fields),
+
+    /** Scene action "Lutron: press a keypad button". */
+    pressKeypadButton: (fields) => sceneActions.pressKeypadButton(fields),
 
     /** Scene action "Lutron: tilt the slats". */
     setTilt: (fields) => sceneActions.setTilt(fields),

@@ -35,11 +35,13 @@ export const MANIFEST_ACTIONS = Object.freeze({
 export const SCENE_TRIGGERS = Object.freeze({
   BRIDGE_OFFLINE: 'bridge_offline',
   BRIDGE_ONLINE: 'bridge_online',
+  AREA_SCENE_ACTIVATED: 'area_scene_activated',
 });
 
 export const SCENE_ACTIONS = Object.freeze({
   SET_LEVEL_WITH_FADE: 'set_level_with_fade',
   SET_TILT: 'set_tilt',
+  PRESS_KEYPAD_BUTTON: 'press_keypad_button',
 });
 
 export const WIDGETS = Object.freeze({

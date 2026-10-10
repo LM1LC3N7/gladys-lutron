@@ -42,6 +42,9 @@ gladys.onSceneAction(SCENE_ACTIONS.SET_LEVEL_WITH_FADE, (fields) =>
   lutron.setLevelWithFade(fields),
 );
 gladys.onSceneAction(SCENE_ACTIONS.SET_TILT, (fields) => lutron.setTilt(fields));
+gladys.onSceneAction(SCENE_ACTIONS.PRESS_KEYPAD_BUTTON, (fields) =>
+  lutron.pressKeypadButton(fields),
+);
 gladys.onWidgetGet(WIDGETS.OVERVIEW, () => lutron.getOverview());
 gladys.onWidgetAction(WIDGETS.OVERVIEW, (actionKey) => lutron.onWidgetAction(actionKey));
 

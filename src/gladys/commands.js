@@ -55,6 +55,14 @@ export function createCommandHandler({ system, catalog, fadeSeconds, publisher }
         await moveCover(zoneId, kind, value);
         publisher.set(feature.external_id, value);
         return undefined;
+      case 'temperature':
+        return system.setKelvin(zoneId, value);
+      case 'color':
+        return system.setColor(zoneId, value);
+      case 'warm-dim':
+        return system.setWarmDim(zoneId, value > 0);
+      case 'led':
+        return system.setLed(target.ledId, value > 0);
       case 'smart-away':
         return system.setSmartAwayEnabled(value > 0);
       case 'scene':

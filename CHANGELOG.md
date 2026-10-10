@@ -50,3 +50,8 @@ All notable changes to this project are documented here. The format follows
 - Dashboard widget "Lutron overview": bridge and connection, Smart Away,
   devices, occupied rooms, low batteries, the last Pico presses, and
   buttons for Smart Away and reconnection.
+- RadioRA 3 and HomeWorks QSX processors (testers wanted): zones per room,
+  keypads with their engravings and LEDs, Picos, occupancy per room, tunable
+  white and colour lights (Ketra, Lumaris) with colour temperature, colour
+  and warm dimming. Scene action "Lutron: press a keypad button" and scene
+  trigger "Lutron: room scene activated".

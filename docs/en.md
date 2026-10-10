@@ -1,7 +1,7 @@
 # Lutron for Gladys Assistant
 
 Control your Lutron lights, shades and fans from Gladys, and use your Pico
-remotes in Gladys scenes. Everything runs **on your local network**, over
+remotes and keypads in Gladys scenes. Everything runs **on your local network**, over
 Lutron's LEAP protocol: no Lutron account, no cloud, no Internet connection
 needed by the integration.
 
@@ -11,18 +11,19 @@ needed by the integration.
 
 ## Supported systems
 
-| System                                          | Status          |
-| ----------------------------------------------- | --------------- |
-| Caséta Smart Hub (L-BDG2, sold in starter kits) | supported       |
-| Caséta Smart Bridge PRO (L-BDGPRO2)             | supported       |
-| RA2 Select (RR-SEL-REP2)                        | supported       |
-| RadioRA 3, HomeWorks QSX                        | planned (0.2.0) |
-| Original Smart Bridge (L-BDG, before LEAP)      | not supported   |
-| RadioRA 2, HomeWorks QS (telnet)                | not supported   |
+| System                                          | Status                    |
+| ----------------------------------------------- | ------------------------- |
+| Caséta Smart Hub (L-BDG2, sold in starter kits) | supported                 |
+| Caséta Smart Bridge PRO (L-BDGPRO2)             | supported                 |
+| RA2 Select (RR-SEL-REP2)                        | supported                 |
+| RadioRA 3, HomeWorks QSX                        | supported, testers wanted |
+| Original Smart Bridge (L-BDG, before LEAP)      | not supported             |
+| RadioRA 2, HomeWorks QS (telnet)                | not supported             |
 
 Devices: dimmers (Caséta, Diva, Sunnata, plug-in, in-line), switches and
-plug-in modules, shades and wood blinds, fan controls, occupancy sensors,
-Pico remotes.
+plug-in modules, relays, shades, drapes and wood blinds, fan controls,
+occupancy sensors, Pico remotes; on RadioRA 3 and HomeWorks QSX also
+keypads with their LEDs, tunable white and colour lights (Ketra, Lumaris).
 
 ## What stays local, what does not
 
@@ -59,14 +60,16 @@ Each Lutron device becomes a Gladys device named after its Lutron room
 | Lutron                          | In Gladys                                                            |
 | ------------------------------- | -------------------------------------------------------------------- |
 | Dimmer (Diva, Caséta, Sunnata…) | Light: on/off and brightness                                         |
+| Tunable white, colour light     | Light: also colour temperature (K), colour, and a "Warm dim" switch  |
 | Switch, plug-in module, relay   | Switch: on/off                                                       |
 | Fan control                     | Fan: speed in % (0 off, 25 low, 50 medium, 75 medium-high, 100 high) |
 | Shade, roller, honeycomb        | Shutter: open / close / stop and position                            |
 | Drape                           | Curtain: open / close / stop and position                            |
 | Tilt-only wood blind            | Shutter: the position tilts the slats (50 = open, 0 = closed)        |
 | Occupancy sensors of a room     | Presence: occupied / free                                            |
-| Lutron scene                    | Push button "Activate"                                               |
+| Lutron scene (Caséta)           | Push button "Activate"                                               |
 | Bridge                          | Switch "Smart Away"                                                  |
+| Keypad (RadioRA 3, QSX)         | One button per key (its engraving) and one switch per LED            |
 | Battery shade or sensor         | "Battery low" (Lutron only says good or low)                         |
 
 "On" brings a light back to its last level. States follow the bridge in
@@ -103,6 +106,23 @@ Raise and Lower repeat while held, so their long press is detected 0.25 s
 later than the other buttons: a short press on them stays a click. Two
 identical clicks in a row are two events: each one starts the scene. The
 Pico reports no battery level (Lutron does not send it).
+
+## Keypads (RadioRA 3, HomeWorks QSX)
+
+Each keypad becomes a Gladys device: its keys are buttons like the Pico ones
+(named after their engraving), and each LED a switch. A key runs its Lutron
+programming as usual; Gladys sees the press. An LED follows the keypad
+programming: Lutron may switch it back right after Gladys changes it (an
+LED tracks its scene or its zones).
+
+- Action **"Lutron: press a keypad button"** (keypad, engraving or number)
+  presses a key as a finger would, which runs its Lutron programming. A
+  Caséta bridge cannot do it with a Pico: control the light or the scene
+  directly.
+- Trigger **"Lutron: room scene activated"** fires when a room scene
+  changes (keypad, app, timeclock), with the room and scene names as
+  variables and as optional filters. Not fired for a key pressed by Gladys
+  itself.
 
 ## Scenes
 

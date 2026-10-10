@@ -78,3 +78,75 @@ export function casetaRoutes({
   }
   return routes;
 }
+
+/**
+ * A RadioRA 3 (`ra3`) or HomeWorks QSX (`hwqsx`) processor.
+ *
+ * @param {'ra3' | 'hwqsx'} system
+ * @param {object} [options]
+ * @param {Record<string, object[]>} [options.areaScenes] area id -> AreaScenes
+ * @param {Record<string, string>} [options.leds] LED id -> On / Off (others: Off)
+ */
+export function processorRoutes(system, { areaScenes = {}, leds = {} } = {}) {
+  const dir = `${system}/`;
+  const body = (path) => {
+    const message = load(`${dir}${path}`);
+    // hwqsx/zonestatus.json is a bare body.
+    return message.Header ? message : ok(message, { MessageBodyType: 'MultipleZoneStatus' });
+  };
+  const routes = {
+    '/project': () => body('project.json'),
+    '/area': () => body('areas.json'),
+    '/device': () => body('devices.json'),
+    '/device?where=IsThisDevice:true': () => body('processor.json'),
+    '/device?where=IsThisDevice:false': () => body('device-list.json'),
+    'SubscribeRequest /zone/status': () => body('zonestatus.json'),
+    'ReadRequest /zone/status': () => body('zonestatus.json'),
+    'SubscribeRequest /area/status': () => body('area/status-subscribe.json'),
+    'ReadRequest /area/status': () => body('area/status-subscribe.json'),
+  };
+  for (const area of load(`${dir}areas.json`).Body.Areas) {
+    const id = area.href.split('/')[2];
+    routes[`/area/${id}/associatedzone`] = () => body(`area/${id}/associatedzone.json`);
+    routes[`/area/${id}/associatedcontrolstation`] = () => body(`area/${id}/controlstation.json`);
+    if (areaScenes[id]) routes[`/area/${id}/areascene`] = () => ok({ AreaScenes: areaScenes[id] });
+  }
+  const devices = [];
+  for (const area of load(`${dir}areas.json`).Body.Areas) {
+    const id = area.href.split('/')[2];
+    const stations = load(`${dir}area/${id}/controlstation.json`).Body?.ControlStations ?? [];
+    for (const station of stations) {
+      for (const ganged of station.AssociatedGangedDevices) devices.push(ganged.Device.href);
+    }
+  }
+  for (const href of devices) {
+    const id = href.split('/')[2];
+    try {
+      const group = load(`${dir}device/${id}/buttongroup.json`);
+      const device = load(`${dir}device/${id}/device.json`);
+      routes[`/device/${id}/buttongroup/expanded`] = () => group;
+      routes[`/device/${id}`] = () => device;
+      for (const button of group.Body.ButtonGroupsExpanded.flatMap((g) => g.Buttons ?? [])) {
+        const led = button.AssociatedLED?.href;
+        if (!led) continue;
+        const ledId = led.split('/')[2];
+        const status = () =>
+          ok(
+            {
+              LEDStatus: { href: `${led}/status`, LED: { href: led }, State: leds[ledId] ?? 'Off' },
+            },
+            { MessageBodyType: 'OneLEDStatus' },
+          );
+        routes[`SubscribeRequest ${led}/status`] = status;
+        routes[`ReadRequest ${led}/status`] = status;
+        routes[`UpdateRequest ${led}/status`] = (request) => {
+          leds[ledId] = request.Body.LEDStatus.State;
+          return status();
+        };
+      }
+    } catch {
+      // Not a button device of the fixtures (dimmers, switches).
+    }
+  }
+  return routes;
+}

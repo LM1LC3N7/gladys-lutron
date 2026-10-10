@@ -3,8 +3,8 @@
   "type": "device",
   "name": "Lutron",
   "description": {
-    "en": "Lutron Caséta and RA2 Select, 100% local (LEAP): lights, shades, fans, Pico remotes.",
-    "fr": "Lutron Caséta et RA2 Select, 100 % local (LEAP) : lumières, stores, ventilateurs, Pico."
+    "en": "Lutron Caséta, RA2 Select, RadioRA 3 and HomeWorks QSX, 100% local (LEAP): lights, shades, fans, Pico remotes, keypads.",
+    "fr": "Lutron Caséta, RA2 Select, RadioRA 3 et HomeWorks QSX, 100 % local (LEAP) : lumières, stores, ventilateurs, Pico, claviers."
   },
   "version": "0.0.0",
   "docker_image": "ghcr.io/lm1lc3n7/gladys-lutron:0.0.0",
@@ -248,6 +248,53 @@
           }
         }
       ]
+    },
+    {
+      "key": "area_scene_activated",
+      "label": {
+        "en": "Lutron: room scene activated",
+        "fr": "Lutron : scène de pièce activée"
+      },
+      "description": {
+        "en": "RadioRA 3 and HomeWorks QSX: a room scene was activated (keypad, app, timeclock). Leave a field empty for any room or scene.",
+        "fr": "RadioRA 3 et HomeWorks QSX : une scène de pièce a été activée (clavier, application, horloge). Laissez un champ vide pour toute pièce ou scène."
+      },
+      "fields": [
+        {
+          "key": "area",
+          "type": "string",
+          "label": {
+            "en": "Room (Lutron name)",
+            "fr": "Pièce (nom Lutron)"
+          }
+        },
+        {
+          "key": "scene",
+          "type": "string",
+          "label": {
+            "en": "Scene (Lutron name)",
+            "fr": "Scène (nom Lutron)"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "area",
+          "type": "string",
+          "label": {
+            "en": "Room",
+            "fr": "Pièce"
+          }
+        },
+        {
+          "key": "scene",
+          "type": "string",
+          "label": {
+            "en": "Scene",
+            "fr": "Scène"
+          }
+        }
+      ]
     }
   ],
   "scene_actions": [
@@ -328,6 +375,43 @@
           "label": {
             "en": "Tilt (%)",
             "fr": "Inclinaison (%)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "press_keypad_button",
+      "label": {
+        "en": "Lutron: press a keypad button",
+        "fr": "Lutron : appuyer sur un bouton de clavier"
+      },
+      "description": {
+        "en": "RadioRA 3 and HomeWorks QSX: presses a keypad button as a finger would, running its Lutron programming (scene, shades…). Not possible on Caséta.",
+        "fr": "RadioRA 3 et HomeWorks QSX : appuie sur un bouton de clavier comme un doigt, ce qui lance sa programmation Lutron (scène, stores…). Impossible sur Caséta."
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "required": true,
+          "label": {
+            "en": "Keypad",
+            "fr": "Clavier"
+          }
+        },
+        {
+          "key": "button",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Button (engraving or number)",
+            "fr": "Bouton (gravure ou numéro)"
+          },
+          "placeholder": {
+            "en": "Entertain",
+            "fr": "Entertain"
           }
         }
       ]

@@ -3,9 +3,9 @@
 External integration for [Gladys Assistant](https://gladysassistant.com) to
 control Lutron lighting, shades and fans and to use Pico remotes in Gladys
 scenes, **fully locally** over Lutron's LEAP protocol: Caséta (Smart Hub and
-Smart Bridge PRO), RA2 Select, and later RadioRA 3 and HomeWorks QSX.
+Smart Bridge PRO), RA2 Select, RadioRA 3 and HomeWorks QSX.
 
-> **Status: in development** (milestones 1 to 6 of 8 done: LEAP client, local pairing, devices, states and commands, Pico buttons, scene actions and triggers, dashboard widget; RadioRA 3 / HomeWorks QSX come next). The audit of existing libraries and
+> **Status: in development** (milestones 1 to 7 of 8 done: LEAP client, local pairing, devices, states and commands, Pico buttons, scene actions and triggers, dashboard widget, RadioRA 3 / HomeWorks QSX; hardening comes next). The audit of existing libraries and
 > integrations is in [AUDIT.md](./AUDIT.md), the implementation plan in
 > [TODO.md](./TODO.md).
 
@@ -20,8 +20,10 @@ Smart Bridge PRO), RA2 Select, and later RadioRA 3 and HomeWorks QSX.
 - A robust connection: keep-alive watchdog, reconnection and full state
   resync.
 - Gladys 5.1 surfaces: a dashboard overview widget, scene actions for what
-  device features cannot express (fade, tilt), bridge offline/online
-  triggers.
+  device features cannot express (fade, tilt, keypad press), bridge
+  offline/online and room scene triggers.
+- RadioRA 3 and HomeWorks QSX: keypads with engravings and LEDs, tunable
+  white and colour lights.
 
 ## Design choices
 

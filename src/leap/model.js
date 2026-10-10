@@ -2,7 +2,8 @@
 // The Lutron project, read from the bridge and normalized: areas, zones (what
 // can be controlled), occupancy groups, scenes, Smart Away, batteries.
 //
-// Caséta and RA2 Select ("Lutron Smart Bridge Project") are read here, after
+// Caséta and RA2 Select ("Lutron Smart Bridge Project") are read here (RA3
+// and QSX in processorModel.js), after
 // pylutron-caseta (Apache-2.0, see NOTICE). Optional endpoints (scenes,
 // occupancy, Smart Away, batteries) that a bridge does not have are skipped;
 // only `/area` and `/device` are required. An unknown device type is
@@ -53,6 +54,7 @@ import { batteryLowOf, smartAwayOf } from './status.js';
  * @property {string} type
  * @property {string} name
  * @property {string | null} area
+ * @property {string | null} areaId   RA3 / QSX only (area scenes)
  * @property {string | null} serial
  * @property {string | null} model
  * @property {Button[]} buttons
@@ -181,6 +183,7 @@ export async function loadCasetaModel(connection, bridge) {
         type: device.DeviceType,
         name: displayName(areaOf(device), name),
         area: areaOf(device),
+        areaId: null,
         serial: serialToHex(device.SerialNumber),
         model: device.ModelNumber ?? null,
         buttons: [],
@@ -282,13 +285,4 @@ export async function readBatteries(connection, deviceIds) {
     if (low !== null) batteries.set(deviceId, low);
   }
   return batteries;
-}
-
-/**
- * @param {{ read(url: string): Promise<any> }} connection
- * @param {import('./bridgeInfo.js').BridgeInfo} bridge
- * @returns {Promise<LutronModel>}
- */
-export async function loadModel(connection, bridge) {
-  return loadCasetaModel(connection, bridge);
 }

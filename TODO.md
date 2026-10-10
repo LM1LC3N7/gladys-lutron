@@ -28,7 +28,7 @@ The research behind every choice is in [AUDIT.md](./AUDIT.md).
 - [x] **Milestone 5 — Pico remotes and buttons (click, double, long)**
 - [x] **Milestone 6 — scene actions, scene triggers, dashboard widget →
       release 0.1.0**
-- [ ] **Milestone 7 — RadioRA 3 / HomeWorks QSX, keypads, LEDs, colour →
+- [x] **Milestone 7 — RadioRA 3 / HomeWorks QSX, keypads, LEDs, colour →
       release 0.2.0**
 - [ ] **Milestone 8 — hardening, diagnostics, forum announcement**
 
@@ -325,22 +325,41 @@ maintainer has validated the integration on their hardware; it bumps
 publishes the image. Add the `gladys-assistant-integration` topic to the
 repository.
 
-## Milestone 7 — RadioRA 3 / HomeWorks QSX → release 0.2.0
+## Milestone 7 — RadioRA 3 / HomeWorks QSX (done, testers wanted)
 
-- [ ] Model per area: control stations, keypads (`buttongroup/expanded`,
-      engravings as button names), zones (`associatedzone`, `ControlType`),
-      area scenes (`areascene` → presets), occupancy through `/area/status`,
-      processor through `IsThisDevice`; `/project` `ProductType` picks the
-      path; `204` on `/device` handled (QSX).
-- [ ] Keypad LEDs as `switch`/`binary` (+ the LED auto-off gotcha in the
-      docs); area scenes as `button`/`push`; scene action
-      `press_keypad_button`; scene trigger `area_scene_activated`
-      (`CurrentScene` of `/area/status`).
-- [ ] Tunable white (`light`/`temperature` in kelvin), colour
-      (`light`/`color` ↔ HSV), warm dim (also Caséta Lumaris tape light).
-- [ ] Native `MultiTap` / `LongHold` checked (QSX sends `LongHold`; openHAB
-      says RA3 sends them when programmed in Designer).
-- [ ] Testers wanted on the forum (no hardware here, question 2).
+- `src/leap/processorModel.js`: per area `associatedzone` (kind from the
+  `ControlType`, `WhiteTuningLevelRange`), `associatedcontrolstation` →
+  keypads and Picos (`buttongroup/expanded`, `/device/{id}`): engraving
+  first, then the Pico table, then the LEAP name; LED of each key;
+  `areascene` (any collection of `/areascene/` items); occupancy per area
+  from the sensors of `/device?where=IsThisDevice:false`; `/device` never
+  read (204 on QSX). "Device 1" style names become "Keypad 1".
+- `src/leap/system.js`: `loadModel` picks Caséta or processor from
+  `/project`; processors subscribe `/zone/status` (one read for every zone),
+  `/area/status` (occupancy, active scene), every `/led/{id}/status`; resync
+  reads them again. Events `led`, `areaScene` (a change after the load, not
+  within 5 s of our own press in that area). Commands `setKelvin` (kept in
+  the zone range), `setColor` (RGB → HSV), `setWarmDim`, `setLed`,
+  `pressButton` (refused on Caséta: pylutron-caseta #96).
+- `src/leap/color.js`: RGB ↔ hue / saturation.
+- Gladys: white tune → `light/temperature` (kelvin, range of the zone) and a
+  "Warm dim" switch; spectrum (Ketra, Lumaris RGB+TW) → also `light/color`;
+  keypads → `button/click` per key plus `switch/binary` per LED
+  (`led-<number>`); scene action `press_keypad_button` (device, engraving
+  or number); scene trigger `area_scene_activated` (fields and variables
+  `area`, `scene`: Lutron names).
+- **Deviation from the plan**: area scenes are not published as
+  `button`/`push` features. No source confirms the LEAP request activating
+  an area scene, and a button that does nothing is worse than none; a
+  keypad key runs the same scene (`press_keypad_button`). To revisit with a
+  tester's Diagnostics export.
+- Tests on pylutron-caseta's RA3 and QSX responses
+  (`processorRoutes()` in `test/helpers/pylutronBridge.js`).
+
+To check with testers: native `MultiTap` / `LongHold` (QSX sends
+`LongHold`; openHAB says RA3 sends them when programmed in Designer), the
+`areascene` answer, LED changes made by Gladys being overridden by the
+programming, battery answers of RA3 sensors.
 
 ## Milestone 8 — hardening
 

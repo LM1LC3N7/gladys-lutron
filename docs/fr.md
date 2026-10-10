@@ -1,7 +1,7 @@
 # Lutron pour Gladys Assistant
 
 Pilotez vos lumières, stores et ventilateurs Lutron depuis Gladys, et
-utilisez vos télécommandes Pico dans les scènes Gladys. Tout fonctionne **sur
+utilisez vos télécommandes Pico et vos claviers dans les scènes Gladys. Tout fonctionne **sur
 votre réseau local**, avec le protocole LEAP de Lutron : aucun compte Lutron,
 aucun cloud, aucune connexion Internet nécessaire à l'intégration.
 
@@ -12,18 +12,20 @@ aucun cloud, aucune connexion Internet nécessaire à l'intégration.
 
 ## Systèmes compatibles
 
-| Système                                                  | État           |
-| -------------------------------------------------------- | -------------- |
-| Caséta Smart Hub (L-BDG2, vendu dans les kits de départ) | compatible     |
-| Caséta Smart Bridge PRO (L-BDGPRO2)                      | compatible     |
-| RA2 Select (RR-SEL-REP2)                                 | compatible     |
-| RadioRA 3, HomeWorks QSX                                 | prévu (0.2.0)  |
-| Ancien Smart Bridge (L-BDG, avant LEAP)                  | non compatible |
-| RadioRA 2, HomeWorks QS (telnet)                         | non compatible |
+| Système                                                  | État                            |
+| -------------------------------------------------------- | ------------------------------- |
+| Caséta Smart Hub (L-BDG2, vendu dans les kits de départ) | compatible                      |
+| Caséta Smart Bridge PRO (L-BDGPRO2)                      | compatible                      |
+| RA2 Select (RR-SEL-REP2)                                 | compatible                      |
+| RadioRA 3, HomeWorks QSX                                 | compatible, testeurs recherchés |
+| Ancien Smart Bridge (L-BDG, avant LEAP)                  | non compatible                  |
+| RadioRA 2, HomeWorks QS (telnet)                         | non compatible                  |
 
 Appareils : variateurs (Caséta, Diva, Sunnata, à brancher, en ligne),
-interrupteurs et modules à brancher, stores et stores à lames, commandes de
-ventilateur, détecteurs de présence, télécommandes Pico.
+interrupteurs et modules à brancher, relais, stores, rideaux et stores à
+lames, commandes de ventilateur, détecteurs de présence, télécommandes Pico ;
+sur RadioRA 3 et HomeWorks QSX aussi les claviers et leurs voyants, les
+lumières à blanc réglable et en couleur (Ketra, Lumaris).
 
 ## Ce qui reste local, ce qui ne l'est pas
 
@@ -63,14 +65,16 @@ correspondante :
 | Lutron                                  | Dans Gladys                                                                          |
 | --------------------------------------- | ------------------------------------------------------------------------------------ |
 | Variateur (Diva, Caséta, Sunnata…)      | Lumière : marche/arrêt et luminosité                                                 |
+| Lumière à blanc réglable ou couleur     | Lumière : aussi température de couleur (K), couleur et un interrupteur « Warm dim »  |
 | Interrupteur, module à brancher, relais | Interrupteur : marche/arrêt                                                          |
 | Commande de ventilateur                 | Ventilateur : vitesse en % (0 arrêt, 25 lent, 50 moyen, 75 moyen-rapide, 100 rapide) |
 | Store, store enrouleur, store plissé    | Volet : ouvrir / fermer / stop et position                                           |
 | Rideau                                  | Rideau : ouvrir / fermer / stop et position                                          |
 | Store vénitien en bois (lames seules)   | Volet : la position oriente les lames (50 = ouvertes, 0 = fermées)                   |
 | Détecteurs de présence d'une pièce      | Présence : occupée / libre                                                           |
-| Scène Lutron                            | Bouton « Activer »                                                                   |
+| Scène Lutron (Caséta)                   | Bouton « Activer »                                                                   |
 | Bridge                                  | Interrupteur « Smart Away »                                                          |
+| Clavier (RadioRA 3, QSX)                | Un bouton par touche (sa gravure) et un interrupteur par voyant                      |
 | Store ou détecteur à piles              | « Pile faible » (Lutron indique seulement bonne ou faible)                           |
 
 « Marche » rallume une lumière à son dernier niveau. Les états suivent le
@@ -111,6 +115,24 @@ pour qu'un appui court reste un clic. Deux clics identiques à la suite sont
 deux événements : chacun lance la scène. La Pico n'indique pas le niveau de
 sa pile (Lutron ne le transmet pas). Les noms des boutons restent en anglais
 (On, Off, Favorite, Raise, Lower…), comme sur la télécommande.
+
+## Claviers (RadioRA 3, HomeWorks QSX)
+
+Chaque clavier devient un appareil Gladys : ses touches sont des boutons
+comme ceux des Pico (nommés d'après leur gravure), et chaque voyant un
+interrupteur. Une touche lance sa programmation Lutron comme d'habitude ;
+Gladys voit l'appui. Un voyant suit la programmation du clavier : Lutron peut
+le rebasculer juste après un changement fait par Gladys (un voyant suit sa
+scène ou ses zones).
+
+- Action **« Lutron : appuyer sur un bouton de clavier »** (clavier, gravure
+  ou numéro) : appuie sur une touche comme un doigt, ce qui lance sa
+  programmation Lutron. Un bridge Caséta ne sait pas le faire avec une Pico :
+  pilotez directement la lumière ou la scène.
+- Déclencheur **« Lutron : scène de pièce activée »** : quand la scène d'une
+  pièce change (clavier, application, horloge), avec les noms de la pièce et
+  de la scène en variables et en filtres facultatifs. Pas déclenché pour une
+  touche appuyée par Gladys elle-même.
 
 ## Scènes
 

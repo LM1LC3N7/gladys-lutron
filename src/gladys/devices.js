@@ -9,14 +9,17 @@
 //   scene      <bridge serial>-scene-<virtual button id>
 //   remote     <serial of the Pico / keypad>, or <bridge serial>-device-<id>
 //   bridge     <bridge serial>
-// Feature keys: on, brightness, position, state, speed, battery-low,
-// occupancy, smart-away, push, button-<ButtonNumber>.
+// Feature keys: on, brightness, temperature, color, warm-dim, position,
+// state, speed, battery-low, occupancy, smart-away, push,
+// button-<ButtonNumber>, led-<ButtonNumber>.
 // -----------------------------------------------------------------------------
 
 import {
   DEVICE_FEATURE_CATEGORIES as C,
   DEVICE_FEATURE_TYPES as T,
+  DEVICE_FEATURE_UNITS as U,
 } from '@gladysassistant/integration-sdk';
+import { hueSaturationToRgb } from '../leap/color.js';
 import { PRESSES } from '../leap/buttonTracker.js';
 import { KINDS } from '../leap/deviceTypes.js';
 
@@ -43,6 +46,8 @@ import { KINDS } from '../leap/deviceTypes.js';
  * @property {Map<string, string[]>} batterySources battery-low feature external id -> device ids
  * @property {import('../leap/bridgeInfo.js').BridgeInfo} bridge
  * @property {Map<string, string>} buttonFeatures button id -> feature external id
+ * @property {Map<string, string>} ledFeatures LED id -> feature external id
+ * @property {Map<string, string>} remoteOfDevice device external id -> Lutron button device id
  * @property {Map<string, string>} zoneOfDevice device external id -> zone id
  * @property {string | null} smartAwayFeature
  * @property {Map<string, string>} deviceOfFeature feature external id -> device external id
@@ -115,9 +120,23 @@ function zoneFeatureSpecs(zone) {
   ];
   switch (zone.kind) {
     case KINDS.DIMMER:
-    case KINDS.WHITE_TUNE:
-    case KINDS.SPECTRUM:
       return [onOff, brightness];
+    case KINDS.WHITE_TUNE:
+    case KINDS.SPECTRUM: {
+      const range = zone.whiteRange ?? { min: 1400, max: 10000 };
+      const temperature = [
+        'temperature',
+        'Colour temperature',
+        C.LIGHT,
+        T.LIGHT.TEMPERATURE,
+        { min: range.min, max: range.max, unit: U.KELVIN },
+      ];
+      const color = ['color', 'Colour', C.LIGHT, T.LIGHT.COLOR, { min: 0, max: 0xffffff }];
+      const warmDim = ['warm-dim', 'Warm dim', C.SWITCH, T.SWITCH.BINARY, {}];
+      return zone.kind === KINDS.SPECTRUM
+        ? [onOff, brightness, temperature, color, warmDim]
+        : [onOff, brightness, temperature, warmDim];
+    }
     case KINDS.SWITCH:
     case KINDS.CCO:
       return [['on', 'Power', C.SWITCH, T.SWITCH.BINARY, {}]];
@@ -145,7 +164,7 @@ function zoneFeatureSpecs(zone) {
 
 const ZONE_ACTIONS = {
   [C.LIGHT]: { on: 'on', brightness: 'brightness' },
-  [C.SWITCH]: { on: 'switch' },
+  [C.SWITCH]: { on: 'switch', 'warm-dim': 'warm-dim' },
   [C.FAN]: { speed: 'speed' },
 };
 
@@ -167,6 +186,8 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
     batterySources: new Map(),
     bridge: model.bridge,
     buttonFeatures: new Map(),
+    ledFeatures: new Map(),
+    remoteOfDevice: new Map(),
     zoneOfDevice: new Map(),
     smartAwayFeature: null,
     deviceOfFeature: new Map(),
@@ -237,10 +258,13 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
       uniqueSerial(remote.serial) ? remote.serial : `${bridgeSerial}-device-${remote.id}`,
     );
     const used = new Set();
+    const suffixes = new Map(); // button id -> "<number>" (or "<number>-<id>" when repeated)
     const features = remote.buttons.map((button) => {
-      let key = `button-${button.number}`;
-      if (used.has(key)) key = `${key}-${button.id}`;
-      used.add(key);
+      let suffix = String(button.number);
+      if (used.has(suffix)) suffix = `${suffix}-${button.id}`;
+      used.add(suffix);
+      suffixes.set(button.id, suffix);
+      const key = `button-${suffix}`;
       const externalId = ids.feature(key);
       catalog.buttonFeatures.set(button.id, externalId);
       return feature(externalId, button.name, C.BUTTON, T.BUTTON.CLICK, {
@@ -251,6 +275,18 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
         supported_options: BUTTON_OPTIONS,
       });
     });
+    catalog.remoteOfDevice.set(ids.device, remote.id);
+    // Keypad LEDs (RA3 / QSX), after the buttons.
+    for (const button of remote.buttons.filter((b) => b.ledId)) {
+      const externalId = ids.feature(`led-${suffixes.get(button.id)}`);
+      catalog.ledFeatures.set(button.ledId, externalId);
+      catalog.targets.set(externalId, { action: 'led', ledId: button.ledId });
+      features.push(
+        feature(externalId, `${button.name} LED`, C.SWITCH, T.SWITCH.BINARY, {
+          keep_history: false,
+        }),
+      );
+    }
     addDevice(ids, {
       name: remote.name,
       model: remote.model ?? remote.type,
@@ -333,6 +369,14 @@ export function zoneValues(zone, state, keys) {
     case KINDS.SPECTRUM:
       push('brightness', state.level);
       push('on', state.level === null ? null : state.level > 0 ? 1 : 0);
+      push('temperature', state.kelvin);
+      if (state.hue !== null && state.hue !== undefined && state.saturation !== null) {
+        push('color', hueSaturationToRgb(state.hue, state.saturation));
+      }
+      push(
+        'warm-dim',
+        state.warmDim === null || state.warmDim === undefined ? null : state.warmDim ? 1 : 0,
+      );
       break;
     case KINDS.SWITCH:
     case KINDS.CCO:

@@ -2,7 +2,9 @@
 // Scene actions: only what the core "control a device" action cannot say.
 //   - set_level_with_fade: a level reached over a chosen time (up to 4 h);
 //   - set_tilt: the slats of a blind with lift and tilt (Gladys has no tilt
-//     feature type).
+//     feature type);
+//   - press_keypad_button: a RA3 / QSX keypad button, which runs its Lutron
+//     programming (the core cannot press a read-only button feature).
 // A device that cannot do it is refused with a message saying why.
 // -----------------------------------------------------------------------------
 
@@ -48,6 +50,27 @@ export function createSceneActions({ system, catalog }) {
       const level = number(fields.level, 'level', 0, 100);
       const fade = number(fields.fade_seconds ?? 2, 'fade_seconds', 0, MAX_FADE_SECONDS);
       await system.setLevel(zone.id, level, fade);
+    },
+
+    /** @param {{ device?: string, button?: unknown }} fields */
+    async pressKeypadButton(fields) {
+      if (!system.ready) throw new Error(new BridgeOfflineError().message);
+      const deviceId = catalog()?.remoteOfDevice.get(String(fields.device ?? ''));
+      const remote = system.model?.buttonDevices.find((d) => d.id === deviceId);
+      if (!remote) {
+        throw new Error(
+          'Unknown Lutron keypad: choose a Lutron keypad or remote in the field "Keypad".',
+        );
+      }
+      const wanted = String(fields.button ?? '').trim();
+      const button =
+        remote.buttons.find((b) => b.name.toLowerCase() === wanted.toLowerCase()) ??
+        remote.buttons.find((b) => String(b.number) === wanted);
+      if (!button) {
+        const names = remote.buttons.map((b) => `${b.name} (${b.number})`).join(', ');
+        throw new Error(`"${remote.name}" has no button "${wanted}": ${names}`);
+      }
+      await system.pressButton(button.id);
     },
 
     /** @param {{ device?: string, tilt?: unknown }} fields */

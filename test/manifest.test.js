@@ -72,7 +72,11 @@ test('pairing leaves time for the user to reach the bridge button', () => {
 // Published keys are stored in the users' scenes and dashboards: never rename
 // or remove one. Extending these lists is fine.
 test('scene trigger keys are frozen', () => {
-  assert.deepEqual(Object.values(SCENE_TRIGGERS), ['bridge_offline', 'bridge_online']);
+  assert.deepEqual(Object.values(SCENE_TRIGGERS), [
+    'bridge_offline',
+    'bridge_online',
+    'area_scene_activated',
+  ]);
   assert.deepEqual(
     manifest.scene_triggers.map((t) => t.key),
     Object.values(SCENE_TRIGGERS),
@@ -80,7 +84,11 @@ test('scene trigger keys are frozen', () => {
 });
 
 test('scene action keys are frozen', () => {
-  assert.deepEqual(Object.values(SCENE_ACTIONS), ['set_level_with_fade', 'set_tilt']);
+  assert.deepEqual(Object.values(SCENE_ACTIONS), [
+    'set_level_with_fade',
+    'set_tilt',
+    'press_keypad_button',
+  ]);
   assert.deepEqual(
     manifest.scene_actions.map((a) => a.key),
     Object.values(SCENE_ACTIONS),

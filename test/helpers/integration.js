@@ -3,7 +3,7 @@
 
 import { LeapSession } from '../../src/leap/session.js';
 import { createLutronIntegration } from '../../src/gladys/integration.js';
-import { ok, startFakeBridge } from './fakeBridge.js';
+import { startFakeBridge } from './fakeBridge.js';
 import { createMemoryGladys, silentLogger } from './memoryGladys.js';
 import { casetaRoutes } from './pylutronBridge.js';
 import { CREDENTIALS } from './tls.js';
@@ -17,13 +17,7 @@ const PAIRED = {
 };
 
 export async function startIntegration(t, { routes = casetaRoutes(), devices, options = {} } = {}) {
-  const bridge = await startFakeBridge({
-    routes: {
-      ...routes,
-      '/device?where=IsThisDevice:true': () =>
-        ok({ Devices: [{ Name: 'Smart Bridge', ModelNumber: 'L-BDG2-WH', SerialNumber: 1234 }] }),
-    },
-  });
+  const bridge = await startFakeBridge({ routes });
   t.after(() => bridge.close());
   const gladys = createMemoryGladys({ config: { ...PAIRED }, devices });
   const lutron = createLutronIntegration({
