@@ -55,3 +55,6 @@ All notable changes to this project are documented here. The format follows
   white and colour lights (Ketra, Lumaris) with colour temperature, colour
   and warm dimming. Scene action "Lutron: press a keypad button" and scene
   trigger "Lutron: room scene activated".
+- Option "Hide from the Discover tab" per device type.
+- Long-run test of reconnections (no leaked timers, listeners or
+  connections); a button press is never replayed on device creation.

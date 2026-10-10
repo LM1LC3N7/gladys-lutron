@@ -105,9 +105,15 @@ export function createLutronIntegration({
     },
   });
 
+  // Hidden types are only left out of the Discover tab: devices already
+  // created keep their states and commands.
   const publishDiscovered = async () => {
+    const hidden = new Set(config.hiddenDeviceTypes);
+    const devices = (catalog?.devices ?? []).filter(
+      (device) => !hidden.has(catalog.groupOfDevice.get(device.external_id)),
+    );
     try {
-      await gladys.publishDiscoveredDevices(catalog?.devices ?? []);
+      await gladys.publishDiscoveredDevices(devices);
     } catch (error) {
       logger.warn(`Could not publish the discovered Lutron devices: ${error.message}`);
     }
@@ -249,9 +255,13 @@ export function createLutronIntegration({
 
     /** @param {Record<string, unknown>} raw */
     async applyConfig(raw = {}) {
+      const previous = config;
       config = normalizeConfig(raw);
       tracker.setMode(config.buttonDetection);
       await bridge.apply(config);
+      if (catalog && previous.hiddenDeviceTypes.join() !== config.hiddenDeviceTypes.join()) {
+        await publishDiscovered();
+      }
     },
 
     /** The Discover tab asks for the devices. */

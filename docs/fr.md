@@ -5,9 +5,10 @@ utilisez vos télécommandes Pico et vos claviers dans les scènes Gladys. Tout 
 votre réseau local**, avec le protocole LEAP de Lutron : aucun compte Lutron,
 aucun cloud, aucune connexion Internet nécessaire à l'intégration.
 
-> **Version de développement.** L'intégration est construite étape par
-> étape ; les sections ci-dessous décrivent l'objectif de la version 0.1.0.
-> Ce qui fonctionne déjà est listé dans le
+> **Première version, en test.** Tout ce qui suit est développé et testé
+> sur des bridges simulés ; la vérification sur du vrai matériel est en
+> cours (Caséta d'abord). Signalez toute anomalie avec le bouton Diagnostic.
+> Les évolutions sont listées dans le
 > [journal des modifications](../CHANGELOG.md).
 
 ## Systèmes compatibles
@@ -176,6 +177,17 @@ de Gladys.
   l'intégration détecte elle-même doubles clics et appuis longs.
 - L'association peut échouer sur un réseau en « jumbo frames » : associez
   depuis un réseau standard.
+
+## Options
+
+- **Boutons des télécommandes Pico** : la détection des appuis (voir
+  « Télécommandes Pico »).
+- **Durée de fondu par défaut** : voir « Scènes ».
+- **Masquer de l'onglet Découverte** : les types d'appareils que vous ne
+  voulez pas créer dans Gladys (Pico utilisées seulement avec Lutron,
+  scènes, Smart Away…). Les appareils déjà créés continuent de fonctionner.
+
+Un seul bridge par Gladys pour l'instant.
 
 ## Sécurité
 

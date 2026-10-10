@@ -135,7 +135,7 @@ export function createStatePublisher({ gladys, logger, limits = {}, now = Date.n
      * @param {number} value
      */
     async publishEvent(externalId, value) {
-      latest.set(externalId, value);
+      // Not kept in `latest`: replaying a press would fire the scenes again.
       if (!isCreated(externalId)) return false;
       sent.push(now());
       try {

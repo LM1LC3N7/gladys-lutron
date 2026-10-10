@@ -21,7 +21,8 @@ import {
 } from '@gladysassistant/integration-sdk';
 import { hueSaturationToRgb } from '../leap/color.js';
 import { PRESSES } from '../leap/buttonTracker.js';
-import { KINDS } from '../leap/deviceTypes.js';
+import { COVER_KINDS, KINDS, LIGHT_KINDS } from '../leap/deviceTypes.js';
+import { DEVICE_GROUPS } from './keys.js';
 
 /** @typedef {import('@gladysassistant/integration-sdk').Device} Device */
 /** @typedef {import('@gladysassistant/integration-sdk').DeviceFeature} DeviceFeature */
@@ -47,6 +48,7 @@ import { KINDS } from '../leap/deviceTypes.js';
  * @property {import('../leap/bridgeInfo.js').BridgeInfo} bridge
  * @property {Map<string, string>} buttonFeatures button id -> feature external id
  * @property {Map<string, string>} ledFeatures LED id -> feature external id
+ * @property {Map<string, string>} groupOfDevice device external id -> DEVICE_GROUPS value
  * @property {Map<string, string>} remoteOfDevice device external id -> Lutron button device id
  * @property {Map<string, string>} zoneOfDevice device external id -> zone id
  * @property {string | null} smartAwayFeature
@@ -162,6 +164,14 @@ function zoneFeatureSpecs(zone) {
   }
 }
 
+/** @param {string} kind */
+function groupOfKind(kind) {
+  if (LIGHT_KINDS.includes(kind)) return DEVICE_GROUPS.LIGHTS;
+  if (COVER_KINDS.includes(kind)) return DEVICE_GROUPS.SHADES;
+  if (kind === KINDS.FAN) return DEVICE_GROUPS.FANS;
+  return DEVICE_GROUPS.SWITCHES;
+}
+
 const ZONE_ACTIONS = {
   [C.LIGHT]: { on: 'on', brightness: 'brightness' },
   [C.SWITCH]: { on: 'switch', 'warm-dim': 'warm-dim' },
@@ -188,11 +198,13 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
     buttonFeatures: new Map(),
     ledFeatures: new Map(),
     remoteOfDevice: new Map(),
+    groupOfDevice: new Map(),
     zoneOfDevice: new Map(),
     smartAwayFeature: null,
     deviceOfFeature: new Map(),
   };
-  const addDevice = (ids, device) => {
+  const addDevice = (ids, group, device) => {
+    catalog.groupOfDevice.set(ids.device, group);
     catalog.devices.push({
       external_id: ids.device,
       ...device,
@@ -240,7 +252,7 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
     if (zone.battery) addBattery(ids, [zone.deviceId], features);
     catalog.zoneFeatures.set(zone.id, keys);
     catalog.zoneOfDevice.set(ids.device, zone.id);
-    addDevice(ids, {
+    addDevice(ids, groupOfKind(zone.kind), {
       name: zone.name,
       model: zone.model ?? zone.type,
       features,
@@ -287,7 +299,7 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
         }),
       );
     }
-    addDevice(ids, {
+    addDevice(ids, DEVICE_GROUPS.REMOTES, {
       name: remote.name,
       model: remote.model ?? remote.type,
       features,
@@ -307,7 +319,7 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
     ];
     if (group.battery) addBattery(ids, group.sensorDeviceIds, features);
     catalog.occupancyFeatures.set(group.id, { occupancy: occupied });
-    addDevice(ids, {
+    addDevice(ids, DEVICE_GROUPS.OCCUPANCY, {
       name: group.name,
       model: 'Occupancy group',
       features,
@@ -319,7 +331,7 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
     const ids = externalIds('scene', `${bridgeSerial}-scene-${scene.id}`);
     const push = ids.feature('push');
     catalog.targets.set(push, { action: 'scene', sceneId: scene.id });
-    addDevice(ids, {
+    addDevice(ids, DEVICE_GROUPS.SCENES, {
       name: `Scene ${scene.name}`,
       model: 'Lutron scene',
       features: [
@@ -337,7 +349,7 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
     const away = ids.feature('smart-away');
     catalog.smartAwayFeature = away;
     catalog.targets.set(away, { action: 'smart-away' });
-    addDevice(ids, {
+    addDevice(ids, DEVICE_GROUPS.SMART_AWAY, {
       name: model.bridge.name || 'Lutron bridge',
       model: model.bridge.model ?? 'Lutron bridge',
       features: [feature(away, 'Smart Away', C.SWITCH, T.SWITCH.BINARY)],

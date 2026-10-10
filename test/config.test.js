@@ -5,6 +5,7 @@ import {
   normalizeButtonDetection,
   normalizeConfig,
   normalizeFadeSeconds,
+  normalizeHiddenTypes,
   normalizeHost,
 } from '../src/config.js';
 
@@ -14,6 +15,7 @@ test('an empty configuration gives the defaults and no pairing', () => {
     bridgeHostInvalid: false,
     buttonDetection: DEFAULTS.buttonDetection,
     defaultFadeSeconds: DEFAULTS.defaultFadeSeconds,
+    hiddenDeviceTypes: [],
     credentials: null,
     bridgeSerial: null,
     bridgeType: null,
@@ -51,4 +53,15 @@ test('credentials are only usable when the three PEM values are present', () => 
   assert.deepEqual(normalizeConfig(full).credentials, { key: 'K', cert: 'C', ca: 'A' });
   assert.equal(normalizeConfig(full).bridgeSerial, '0123ABCD');
   assert.equal(normalizeConfig({ ...full, leap_ca: '' }).credentials, null);
+});
+
+test('hidden device types: known groups only, from an array or a string', () => {
+  assert.deepEqual(normalizeHiddenTypes(['remotes', 'scenes', 'remotes', 'toasters']), [
+    'remotes',
+    'scenes',
+  ]);
+  assert.deepEqual(normalizeHiddenTypes('["fans"]'), ['fans']);
+  assert.deepEqual(normalizeHiddenTypes('lights, smart_away'), ['lights', 'smart_away']);
+  assert.deepEqual(normalizeHiddenTypes(undefined), []);
+  assert.deepEqual(normalizeHiddenTypes(3), []);
 });

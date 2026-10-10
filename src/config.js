@@ -9,7 +9,7 @@
 // -----------------------------------------------------------------------------
 
 import { isIPv4 } from 'node:net';
-import { BUTTON_DETECTION, CONFIG_KEYS, STORAGE_KEYS } from './gladys/keys.js';
+import { BUTTON_DETECTION, CONFIG_KEYS, DEVICE_GROUPS, STORAGE_KEYS } from './gladys/keys.js';
 
 export const DEFAULTS = Object.freeze({
   buttonDetection: BUTTON_DETECTION.NORMAL,
@@ -50,6 +50,29 @@ export function normalizeFadeSeconds(value) {
   return Math.min(MAX_FADE_SECONDS, Math.max(0, Math.round(number)));
 }
 
+/**
+ * The device groups hidden from the Discover tab (a multi-select stores an
+ * array; a JSON or comma-separated string is accepted too).
+ *
+ * @param {unknown} value
+ * @returns {string[]} known DEVICE_GROUPS values only
+ */
+export function normalizeHiddenTypes(value) {
+  let list = value;
+  if (typeof value === 'string') {
+    try {
+      list = JSON.parse(value);
+    } catch {
+      list = value.split(',');
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  const known = Object.values(DEVICE_GROUPS);
+  return [
+    ...new Set(list.map((item) => String(item).trim()).filter((item) => known.includes(item))),
+  ];
+}
+
 function nonEmptyString(value) {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
@@ -67,6 +90,7 @@ function nonEmptyString(value) {
  * @property {boolean} bridgeHostInvalid      something was typed but it is not an IPv4
  * @property {string} buttonDetection         instant | normal | relaxed
  * @property {number} defaultFadeSeconds
+ * @property {string[]} hiddenDeviceTypes    DEVICE_GROUPS hidden from the Discover tab
  * @property {PairingCredentials | null} credentials null until paired
  * @property {string | null} bridgeSerial     serial of the paired bridge
  * @property {string | null} bridgeType       mDNS system type of the paired bridge
@@ -87,6 +111,7 @@ export function normalizeConfig(raw = {}) {
     bridgeHostInvalid: bridgeHost === null && nonEmptyString(typedHost) !== null,
     buttonDetection: normalizeButtonDetection(raw[CONFIG_KEYS.BUTTON_DETECTION]),
     defaultFadeSeconds: normalizeFadeSeconds(raw[CONFIG_KEYS.DEFAULT_FADE_SECONDS]),
+    hiddenDeviceTypes: normalizeHiddenTypes(raw[CONFIG_KEYS.HIDDEN_DEVICE_TYPES]),
     credentials: key && cert && ca ? { key, cert, ca } : null,
     bridgeSerial: nonEmptyString(raw[STORAGE_KEYS.BRIDGE_SERIAL]),
     bridgeType: nonEmptyString(raw[STORAGE_KEYS.BRIDGE_TYPE]),

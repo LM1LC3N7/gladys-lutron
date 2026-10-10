@@ -229,6 +229,9 @@ test('publisher: replay after a device creation; events never deduplicated', asy
   assert.equal(await publisher.publishEvent('btn', 1), true);
   assert.equal(await publisher.publishEvent('btn', 1), true);
   assert.equal(await publisher.publishEvent('nope', 1), false);
+  publisher.replay(['btn']);
+  await publisher.drain();
+  assert.equal(gladys.states().length, 3, 'a press is never replayed');
   assert.deepEqual(gladys.states().slice(1), [
     ['btn', 1],
     ['btn', 1],

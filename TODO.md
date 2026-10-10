@@ -30,7 +30,7 @@ The research behind every choice is in [AUDIT.md](./AUDIT.md).
       release 0.1.0**
 - [x] **Milestone 7 — RadioRA 3 / HomeWorks QSX, keypads, LEDs, colour →
       release 0.2.0**
-- [ ] **Milestone 8 — hardening, diagnostics, forum announcement**
+- [x] **Milestone 8 — hardening, diagnostics, forum announcement**
 
 ## Answers of the maintainer (2026-10-09)
 
@@ -361,10 +361,32 @@ To check with testers: native `MultiTap` / `LongHold` (QSX sends
 `areascene` answer, LED changes made by Gladys being overridden by the
 programming, battery answers of RA3 sensors.
 
-## Milestone 8 — hardening
+## Milestone 8 — hardening (done)
 
-- [ ] Long-run test against a fake bridge (memory, timers, reconnections).
-- [ ] Several bridges if requested (question 5).
-- [ ] Option to hide device types; forum announcement in the thread of
-      [topic 10385](https://community.gladysassistant.com/t/10385),
-      explaining why `lutron-leap` was not used.
+- `test/longrun.test.js`: 25 reconnections with a full model reload each
+  and a resync every 15 ms: no growing timers, listeners, connections or
+  pending requests; states still flow at the end.
+- Option `hidden_device_types` (multi-select: lights, switches, shades,
+  fans, remotes, occupancy, scenes, Smart Away): left out of the Discover
+  tab only; created devices keep their states and commands; changing it
+  republishes the list.
+- A button press is never replayed when a device is created (it would fire
+  the scenes again).
+- Store validator run from a clone of `GladysAssistant/integration-store`:
+  passes (warnings: image not published yet, cover not on `main` yet).
+- Several bridges: not requested (question 5), stays out; documented
+  ("one bridge per Gladys for now").
+- Forum announcement drafted in French: `docs/forum-announcement.fr.md`
+  (to post in topic 10385 once 0.1.0 is published and checked).
+
+## Next (after the hardware checks)
+
+- [ ] Maintainer: pair the Caséta Smart Hub, create the devices, try the
+      Diva dimmers and the Pico (click, double, long), send the Diagnostics
+      export; turn it into `test/fixtures/` and fix what differs.
+- [ ] Run the **Release** workflow (minor → 0.1.0), add the repository topic
+      `gladys-assistant-integration`, post the announcement.
+- [ ] RA3 / QSX testers: area scene activation, `MultiTap` / `LongHold`,
+      LED behaviour, sensor batteries (see milestone 7).
+- [ ] Docker Hub rate limits: `build.yml` / `release.yml` still pull from
+      Docker Hub (the CI build uses `mirror.gcr.io`).

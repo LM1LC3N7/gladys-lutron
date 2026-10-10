@@ -3,8 +3,8 @@
   "type": "device",
   "name": "Lutron",
   "description": {
-    "en": "Lutron Caséta, RA2 Select, RadioRA 3 and HomeWorks QSX, 100% local (LEAP): lights, shades, fans, Pico remotes, keypads.",
-    "fr": "Lutron Caséta, RA2 Select, RadioRA 3 et HomeWorks QSX, 100 % local (LEAP) : lumières, stores, ventilateurs, Pico, claviers."
+    "en": "Lutron Caséta, RA2 Select, RadioRA 3, HomeWorks QSX, 100% local: lights, shades, fans, Picos.",
+    "fr": "Lutron Caséta, RA2 Select, RadioRA 3, HomeWorks QSX, 100 % local : lumières, stores, Pico."
   },
   "version": "0.0.0",
   "docker_image": "ghcr.io/lm1lc3n7/gladys-lutron:0.0.0",
@@ -115,6 +115,77 @@
       "default": 0,
       "min": 0,
       "max": 60
+    },
+    {
+      "key": "hidden_device_types",
+      "type": "multi_select",
+      "label": {
+        "en": "Hide from the Discover tab",
+        "fr": "Masquer de l'onglet Découverte"
+      },
+      "description": {
+        "en": "Device types you do not want to create in Gladys (for example the Picos, if you only use them with Lutron). Devices already created keep working.",
+        "fr": "Types d'appareils que vous ne voulez pas créer dans Gladys (par exemple les Pico, si vous ne les utilisez qu'avec Lutron). Les appareils déjà créés continuent de fonctionner."
+      },
+      "options": [
+        {
+          "value": "lights",
+          "label": {
+            "en": "Lights",
+            "fr": "Lumières"
+          }
+        },
+        {
+          "value": "switches",
+          "label": {
+            "en": "Switches and relays",
+            "fr": "Interrupteurs et relais"
+          }
+        },
+        {
+          "value": "shades",
+          "label": {
+            "en": "Shades and drapes",
+            "fr": "Stores et rideaux"
+          }
+        },
+        {
+          "value": "fans",
+          "label": {
+            "en": "Fans",
+            "fr": "Ventilateurs"
+          }
+        },
+        {
+          "value": "remotes",
+          "label": {
+            "en": "Pico remotes and keypads",
+            "fr": "Télécommandes Pico et claviers"
+          }
+        },
+        {
+          "value": "occupancy",
+          "label": {
+            "en": "Occupancy",
+            "fr": "Présence"
+          }
+        },
+        {
+          "value": "scenes",
+          "label": {
+            "en": "Lutron scenes",
+            "fr": "Scènes Lutron"
+          }
+        },
+        {
+          "value": "smart_away",
+          "label": {
+            "en": "Smart Away (bridge)",
+            "fr": "Smart Away (bridge)"
+          }
+        }
+      ],
+      "default": []
     }
   ],
   "actions": [

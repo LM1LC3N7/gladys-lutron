@@ -72,3 +72,20 @@ test('forgetting the bridge is not an outage', async (t) => {
   await new Promise((resolve) => setTimeout(resolve, 120));
   assert.equal(gladys.callsOf('publishSceneEvent').length, 0);
 });
+
+test('hidden device types: left out of the Discover tab, created ones keep working', async (t) => {
+  const { bridge, gladys, lutron } = await startIntegration(t);
+  const all = gladys.callsOf('publishDiscoveredDevices').at(-1)[0];
+  for (const device of gladys.createAll()) await lutron.onDeviceCreated(device);
+  await lutron.applyConfig({ ...gladys.config, hidden_device_types: ['remotes', 'scenes'] });
+  const shown = gladys.callsOf('publishDiscoveredDevices').at(-1)[0];
+  assert.equal(shown.length, all.length - 2 - lutron.system.model.scenes.length);
+  assert.ok(!shown.some((device) => /:remote:|:scene:/.test(device.external_id)));
+  await lutron.onScanRequest();
+  assert.equal(gladys.callsOf('publishDiscoveredDevices').at(-1)[0].length, shown.length);
+  const calls = gladys.callsOf('publishDiscoveredDevices').length;
+  await lutron.applyConfig({ ...gladys.config, hidden_device_types: ['scenes', 'remotes'].sort() });
+  assert.equal(gladys.callsOf('publishDiscoveredDevices').length, calls, 'unchanged: no republish');
+  await lutron.onSetValue({}, { external_id: 'ext:ext-test-lutron:zone:00000929:on' }, 0);
+  assert.equal(bridge.requestsTo('/zone/1/commandprocessor').length, 1);
+});

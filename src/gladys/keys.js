@@ -11,6 +11,7 @@ export const CONFIG_KEYS = Object.freeze({
   BRIDGE_HOST: 'bridge_host',
   BUTTON_DETECTION: 'button_detection',
   DEFAULT_FADE_SECONDS: 'default_fade_seconds',
+  HIDDEN_DEVICE_TYPES: 'hidden_device_types',
 });
 
 // Written by the integration outside the config_schema: the core stores them
@@ -46,6 +47,18 @@ export const SCENE_ACTIONS = Object.freeze({
 
 export const WIDGETS = Object.freeze({
   OVERVIEW: 'lutron_overview',
+});
+
+/** Option values of `hidden_device_types` (stored in the configuration). */
+export const DEVICE_GROUPS = Object.freeze({
+  LIGHTS: 'lights',
+  SWITCHES: 'switches',
+  SHADES: 'shades',
+  FANS: 'fans',
+  REMOTES: 'remotes',
+  OCCUPANCY: 'occupancy',
+  SCENES: 'scenes',
+  SMART_AWAY: 'smart_away',
 });
 
 export const BUTTON_DETECTION = Object.freeze({

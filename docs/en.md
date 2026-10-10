@@ -5,9 +5,10 @@ remotes and keypads in Gladys scenes. Everything runs **on your local network**,
 Lutron's LEAP protocol: no Lutron account, no cloud, no Internet connection
 needed by the integration.
 
-> **Development version.** The integration is being built step by step; the
-> sections below describe the target of version 0.1.0. What already works is
-> listed in the [changelog](../CHANGELOG.md).
+> **First version, being tested.** Everything below is implemented and
+> tested against simulated bridges; it is being checked on real hardware
+> (Caséta first). Report anything odd with the Diagnostics button. Changes
+> are listed in the [changelog](../CHANGELOG.md).
 
 ## Supported systems
 
@@ -163,6 +164,16 @@ room box.
   and long presses itself.
 - Pairing can fail on a network using jumbo frames: pair from a standard
   network.
+
+## Options
+
+- **Pico remote buttons**: how presses are detected (see "Pico remotes").
+- **Default fade time**: see "Scenes".
+- **Hide from the Discover tab**: device types you do not want to create
+  in Gladys (Picos you only use with Lutron, scenes, Smart Away…). Devices
+  already created keep working.
+
+One bridge per Gladys for now.
 
 ## Security
 
