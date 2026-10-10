@@ -10,9 +10,10 @@
 // -----------------------------------------------------------------------------
 
 import { serialToHex } from './bridgeInfo.js';
-import { KINDS, MAY_HAVE_BATTERY, ZONE_KINDS, kindOf } from './deviceTypes.js';
+import { BUTTON_KINDS, KINDS, MAY_HAVE_BATTERY, ZONE_KINDS, kindOf } from './deviceTypes.js';
 import { LeapStatusError, LeapTimeoutError } from './errors.js';
 import { idFromHref } from './framing.js';
+import { buttonName, isRaiseLower } from './picoModels.js';
 import { batteryLowOf, smartAwayOf } from './status.js';
 
 /**
@@ -150,6 +151,8 @@ export async function loadCasetaModel(connection, bridge) {
   const unknownTypes = new Set();
   const sensorDevices = new Map(); // occupancy sensor id -> device id
   const batteryCandidates = [];
+  const buttonDevices = [];
+  const deviceOfGroup = new Map(); // button group id -> button device
 
   for (const device of devices) {
     const deviceId = idFromHref(device?.href);
@@ -171,6 +174,22 @@ export async function loadCasetaModel(connection, bridge) {
         battery: false,
       });
       if (MAY_HAVE_BATTERY.test(device.DeviceType)) batteryCandidates.push(deviceId);
+    } else if (BUTTON_KINDS.includes(kind)) {
+      const buttonDevice = {
+        id: deviceId,
+        kind,
+        type: device.DeviceType,
+        name: displayName(areaOf(device), name),
+        area: areaOf(device),
+        serial: serialToHex(device.SerialNumber),
+        model: device.ModelNumber ?? null,
+        buttons: [],
+      };
+      buttonDevices.push(buttonDevice);
+      for (const group of device.ButtonGroups ?? []) {
+        const groupId = idFromHref(group?.href);
+        if (groupId) deviceOfGroup.set(groupId, buttonDevice);
+      }
     } else if (kind === KINDS.OCCUPANCY_SENSOR) {
       for (const sensor of device.OccupancySensors ?? []) {
         const sensorId = idFromHref(sensor?.href);
@@ -180,6 +199,23 @@ export async function loadCasetaModel(connection, bridge) {
     } else if (!kind) {
       unknownTypes.add(String(device.DeviceType));
     }
+  }
+
+  if (buttonDevices.length > 0) {
+    for (const button of (await readOptional(connection, '/button'))?.Buttons ?? []) {
+      const id = idFromHref(button?.href);
+      const owner = deviceOfGroup.get(idFromHref(button?.Parent?.href));
+      if (!id || !owner || !Number.isInteger(button.ButtonNumber)) continue;
+      const name = buttonName(owner.type, button.ButtonNumber, button.Name);
+      owner.buttons.push({
+        id,
+        number: button.ButtonNumber,
+        name,
+        raiseLower: isRaiseLower(name),
+        ledId: null,
+      });
+    }
+    for (const owner of buttonDevices) owner.buttons.sort((a, b) => a.number - b.number);
   }
 
   const scenes = [];
@@ -222,7 +258,7 @@ export async function loadCasetaModel(connection, bridge) {
     bridge,
     areas,
     zones,
-    buttonDevices: [],
+    buttonDevices: buttonDevices.filter((device) => device.buttons.length > 0),
     scenes,
     occupancyGroups,
     smartAway: smartAwayEnabled !== null,

@@ -12,14 +12,17 @@
 // - No Gladys here: the adapter (src/gladys/) listens to the events.
 //
 // Events: 'model' (model), 'zone' (zone, state), 'occupancy' (group,
-// occupied), 'smartAway' (enabled), 'battery' (deviceId, low), 'offline'.
+// occupied), 'smartAway' (enabled), 'battery' (deviceId, low), 'button'
+// (device, button, event: Press | Release | MultiTap | LongHold), 'offline'.
+// Button events are only emitted once the model is loaded: a press during a
+// reload is dropped, never replayed late.
 // -----------------------------------------------------------------------------
 
 import { EventEmitter } from 'node:events';
 import { fanCommand, levelCommand, moveCommand, tiltCommand, pressCommand } from './commands.js';
 import { BridgeOfflineError } from './errors.js';
 import { loadModel, readBatteries, readOptional } from './model.js';
-import { occupancyStatesOf, smartAwayOf, zoneStatesOf } from './status.js';
+import { occupancyStatesOf, parseButtonEvent, smartAwayOf, zoneStatesOf } from './status.js';
 
 export const SYSTEM_TIMINGS = Object.freeze({
   resyncIntervalMs: 15 * 60_000,
@@ -57,6 +60,8 @@ export class LutronSystem extends EventEmitter {
     /** @type {Map<string, number>} zone id -> last level above 0 ("on" restores it) */
     this.lastLevels = new Map();
     this.loggedTypes = new Set();
+    /** @type {Map<string, { device: import('./model.js').ButtonDevice, button: import('./model.js').Button }>} */
+    this.buttons = new Map();
   }
 
   /** @param {string} zoneId */
@@ -87,6 +92,11 @@ export class LutronSystem extends EventEmitter {
     const model = await this.load(connection, bridge);
     if (this.connection !== connection) return;
     this.model = model;
+    this.buttons = new Map(
+      model.buttonDevices.flatMap((device) =>
+        device.buttons.map((button) => [button.id, { device, button }]),
+      ),
+    );
     for (const type of model.unknownTypes) {
       if (this.loggedTypes.has(type)) continue;
       this.loggedTypes.add(type);
@@ -120,6 +130,7 @@ export class LutronSystem extends EventEmitter {
     };
     if (model.occupancyGroups.length > 0) await optional('/occupancygroup/status');
     if (model.smartAway) await optional('/system/away/1/status');
+    for (const buttonId of this.buttons.keys()) await optional(`/button/${buttonId}/status/event`);
   }
 
   /** @private Read every zone status (Caséta pushes changes, never the initial state). */
@@ -187,6 +198,11 @@ export class LutronSystem extends EventEmitter {
       this.setOccupancy(groupId, occupied);
     const away = smartAwayOf(body);
     if (away !== null) this.setSmartAway(away);
+    const press = parseButtonEvent(body);
+    if (press && !this.loading) {
+      const entry = this.buttons.get(press.buttonId);
+      if (entry) this.emit('button', entry.device, entry.button, press.event);
+    }
   }
 
   /** @private */

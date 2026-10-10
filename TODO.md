@@ -25,7 +25,7 @@ The research behind every choice is in [AUDIT.md](./AUDIT.md).
 - [x] **Milestone 2 — LEAP client: connection, framing, watchdog**
 - [x] **Milestone 3 — pairing, discovery, configuration UX**
 - [x] **Milestone 4 — Caséta / RA2 Select model, devices, states, commands**
-- [ ] **Milestone 5 — Pico remotes and buttons (click, double, long)**
+- [x] **Milestone 5 — Pico remotes and buttons (click, double, long)**
 - [ ] **Milestone 6 — scene actions, scene triggers, dashboard widget →
       release 0.1.0**
 - [ ] **Milestone 7 — RadioRA 3 / HomeWorks QSX, keypads, LEDs, colour →
@@ -270,28 +270,32 @@ Still to check on the maintainer's bridge: the unsolicited zone statuses
 after a command and a Pico press (no explicit subscription on Caséta, like
 pylutron-caseta), `MessageBodyType` values, the battery answer of a sensor.
 
-## Milestone 5 — Pico remotes and buttons
+## Milestone 5 — Pico remotes and buttons (done)
 
-- [ ] `src/leap/picoModels.js`: button numbers → names per model (Pico 2B,
-      2B raise/lower, 3B, 3B raise/lower, 4B, 4B scene, 4B zone, 4B 2-group,
-      shade 4-group remote, paddle Pico), generic "Button n" for unknown
-      ones (never fatal, HA #184579).
-- [ ] `src/leap/buttonTracker.js`, per button, pure and tested with fake
-      timers:
-  - `Press` → arm the long-press timer (350 ms normal, 750 ms relaxed,
-    +250 ms on raise/lower buttons);
-  - long-press timer fires → `LONG_CLICK_PRESS`; next `Release` →
-    `LONG_CLICK_RELEASE`;
-  - `Release` before it → a second release within the double-click window
-    (300 ms normal, 450 ms relaxed) → `DOUBLE_CLICK`, otherwise `CLICK`
-    when the window ends;
-  - native `MultiTap` → `DOUBLE_CLICK`, native `LongHold` →
-    `LONG_CLICK_PRESS`, without waiting;
-  - `instant` mode: `CLICK` on `Press`, nothing else.
-- [ ] Subscription per button (`/button/{id}/status/event`) restored after
-      every reconnection; button events ignored while the model reloads.
-- [ ] Docs: one example scene per press type with the core "device state"
-      trigger; why the raise/lower long press is delayed.
+- `src/leap/picoModels.js`: button numbers → names for Pico 2B, 2B
+  raise/lower, 3B, 3B raise/lower, 4B, 4B scene, 4B zone, 4B 2-group,
+  paddle Pico and the shade 4-group remote (25 buttons), after Home
+  Assistant's tables (Apache-2.0); otherwise the LEAP name, then
+  "Button n".
+- `src/leap/buttonTracker.js`: pure, tested on a manual clock. Press arms
+  the long press (350 ms normal / 750 ms relaxed, +250 ms on raise/lower);
+  Release before it opens the double-click window (300 / 450 ms); a second
+  Press in the window = double click at once; native `MultiTap` = double,
+  `LongHold` = long press; a lost Release is closed by the next Press;
+  `instant` = click on Press only. Mode change, reconnection and model
+  reload forget the presses in progress.
+- Caséta model: button devices (`ButtonGroups` + `/button`); system:
+  `/button/{id}/status/event` subscribed after every reconnection, events
+  dropped while the model loads.
+- Gladys: one `remote` device per Pico (external id: its serial, or
+  `<bridge serial>-device-<id>`), one read-only `button`/`click` feature per
+  button (`button-<number>`, `supported_options` 1–4), every press published
+  at once with `publishState` (never deduplicated). The last 8 presses are
+  kept for the widget.
+- Docs: example scenes per press type, why raise/lower long presses wait.
+
+Still to check on the maintainer's Pico: the event sequence of a real
+press (Press / Release only on Caséta?), and the timings in practice.
 
 ## Milestone 6 — scene actions, triggers, widget → release 0.1.0
 

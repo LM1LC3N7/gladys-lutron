@@ -97,6 +97,26 @@ test('loadModel (Caséta): zones, occupancy groups, scenes, Smart Away, batterie
   );
   assert.equal(model.batteries.get('5'), true, 'sensor 5 is low');
 
+  assert.deepEqual(
+    model.buttonDevices.map((d) => [
+      d.id,
+      d.kind,
+      d.name,
+      d.buttons.map((b) => [b.id, b.name, b.raiseLower]),
+    ]),
+    [
+      ['8', KINDS.REMOTE, 'Master Bathroom Pico', [['101', 'On', false]]],
+      [
+        '9',
+        KINDS.REMOTE,
+        'Living Room Blinds Remote',
+        [
+          ['102', 'All open', false],
+          ['103', 'Group 1 open', false],
+        ],
+      ],
+    ],
+  );
   assert.ok(model.scenes.length > 0);
   assert.ok(model.scenes.every((scene) => scene.source === 'virtualbutton' && scene.name));
   assert.equal(model.smartAway, true);

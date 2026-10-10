@@ -39,3 +39,8 @@ All notable changes to this project are documented here. The format follows
   states, deduplicated, batched and kept under the Gladys rate limit.
   Commands from Gladys ("on" restores the last level, the default fade time
   applies to every level). Transport badges ("local" / "unreachable").
+- Pico remotes and the shade 4-group remote as Gladys button devices, with
+  the button names of each model; click, double click, long press and its
+  release, usable in the core "device state" trigger. Detection mode
+  Instant / Normal / Slow from the configuration; raise / lower buttons wait
+  a little longer before a long press.

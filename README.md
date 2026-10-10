@@ -5,7 +5,7 @@ control Lutron lighting, shades and fans and to use Pico remotes in Gladys
 scenes, **fully locally** over Lutron's LEAP protocol: Caséta (Smart Hub and
 Smart Bridge PRO), RA2 Select, and later RadioRA 3 and HomeWorks QSX.
 
-> **Status: in development** (milestones 1 to 4 of 8 done: LEAP client, local pairing, devices, states and commands; Pico buttons come next). The audit of existing libraries and
+> **Status: in development** (milestones 1 to 5 of 8 done: LEAP client, local pairing, devices, states and commands, Pico buttons; scene actions, triggers and the widget come next). The audit of existing libraries and
 > integrations is in [AUDIT.md](./AUDIT.md), the implementation plan in
 > [TODO.md](./TODO.md).
 

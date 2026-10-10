@@ -90,6 +90,20 @@ The option **Pico remote buttons** sets how presses are detected:
 - **Slow**: like Normal, with wider timings (0.45 s for a double click,
   0.75 s for a long press), for people who press slowly.
 
+Examples with the trigger "Device state change" on a Pico button:
+
+| Button and press type                                | Scene                             |
+| ---------------------------------------------------- | --------------------------------- |
+| "On", **Click**                                      | turn the living room lights on    |
+| "On", **Double click**                               | activate the "Cinema" scene       |
+| "Off", **Long press**                                | turn every light of the house off |
+| "Raise", **Long press** then **Long press released** | start, then stop, a dimming loop  |
+
+Raise and Lower repeat while held, so their long press is detected 0.25 s
+later than the other buttons: a short press on them stays a click. Two
+identical clicks in a row are two events: each one starts the scene. The
+Pico reports no battery level (Lutron does not send it).
+
 ## Fade time
 
 **Default fade time** applies to every level Gladys sends to a dimmer. The

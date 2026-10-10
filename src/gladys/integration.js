@@ -6,16 +6,18 @@
 // -----------------------------------------------------------------------------
 
 import { normalizeConfig } from '../config.js';
+import { createButtonTracker } from '../leap/buttonTracker.js';
 import { LutronSystem } from '../leap/system.js';
 import { createAvailability } from './availability.js';
 import { createBridgeController } from './bridgeController.js';
 import { createCommandHandler } from './commands.js';
-import { buildCatalog, zoneValues } from './devices.js';
+import { BUTTON_VALUES, buildCatalog, zoneValues } from './devices.js';
 import { SCENE_TRIGGERS } from './keys.js';
 import { bridgeLabel, describeSession } from './messages.js';
 import { createStatePublisher } from './states.js';
 
 const TRANSPORT_BATCH = 100;
+const RECENT_PRESSES = 8;
 
 /**
  * @param {object} options
@@ -41,6 +43,8 @@ export function createLutronIntegration({
   let config = normalizeConfig({});
   /** @type {import('./devices.js').Catalog | null} */
   let catalog = null;
+  /** @type {{ device: string, button: string, press: string, at: string }[]} newest first */
+  const recentPresses = [];
 
   const system = new LutronSystem({ logger, ...systemOptions });
   const publisher = createStatePublisher({ gladys, logger, limits: publisherLimits });
@@ -104,6 +108,7 @@ export function createLutronIntegration({
   };
 
   system.on('model', (model) => {
+    tracker.reset();
     catalog = buildCatalog(model, {
       externalIds: (type, id) => gladys.externalIds(type, id),
       bridgeSerial: model.bridge.serial ?? config.bridgeSerial ?? 'bridge',
@@ -138,7 +143,30 @@ export function createLutronIntegration({
       publishBattery(externalId);
   });
 
+  const tracker = createButtonTracker({
+    mode: config.buttonDetection,
+    onPress: (buttonId, press) => {
+      const externalId = catalog?.buttonFeatures.get(buttonId);
+      const entry = system.buttons.get(buttonId);
+      if (!externalId || !entry) return;
+      logger.debug(`Lutron ${entry.device.name} / ${entry.button.name}: ${press}`);
+      recentPresses.unshift({
+        device: entry.device.name,
+        button: entry.button.name,
+        press,
+        at: new Date().toISOString(),
+      });
+      recentPresses.length = Math.min(recentPresses.length, RECENT_PRESSES);
+      publisher.publishEvent(externalId, BUTTON_VALUES[press]);
+    },
+  });
+
+  system.on('button', (_device, button, event) => {
+    tracker.handle(button.id, event, { raiseLower: button.raiseLower });
+  });
+
   system.on('offline', () => {
+    tracker.reset();
     // A session still alive will reconnect; none means a deliberate stop.
     if (bridge.session) availability.lost();
   });
@@ -153,10 +181,15 @@ export function createLutronIntegration({
     get config() {
       return config;
     },
+    /** The last button presses, newest first (dashboard widget). */
+    get recentPresses() {
+      return recentPresses;
+    },
 
     /** @param {Record<string, unknown>} raw */
     async applyConfig(raw = {}) {
       config = normalizeConfig(raw);
+      tracker.setMode(config.buttonDetection);
       await bridge.apply(config);
     },
 
@@ -179,6 +212,7 @@ export function createLutronIntegration({
     },
 
     async close() {
+      tracker.reset();
       availability.reset();
       publisher.close();
       await bridge.close();

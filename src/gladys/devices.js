@@ -7,15 +7,17 @@
 //              (no serial, or a serial that is not unique in the project)
 //   occupancy  <bridge serial>-<occupancy group id>
 //   scene      <bridge serial>-scene-<virtual button id>
+//   remote     <serial of the Pico / keypad>, or <bridge serial>-device-<id>
 //   bridge     <bridge serial>
 // Feature keys: on, brightness, position, state, speed, battery-low,
-// occupancy, smart-away, push.
+// occupancy, smart-away, push, button-<ButtonNumber>.
 // -----------------------------------------------------------------------------
 
 import {
   DEVICE_FEATURE_CATEGORIES as C,
   DEVICE_FEATURE_TYPES as T,
 } from '@gladysassistant/integration-sdk';
+import { PRESSES } from '../leap/buttonTracker.js';
 import { KINDS } from '../leap/deviceTypes.js';
 
 /** @typedef {import('@gladysassistant/integration-sdk').Device} Device */
@@ -40,11 +42,27 @@ import { KINDS } from '../leap/deviceTypes.js';
  * @property {Map<string, string[]>} batteryFeatures device id -> battery-low feature external ids
  * @property {Map<string, string[]>} batterySources battery-low feature external id -> device ids
  * @property {import('../leap/bridgeInfo.js').BridgeInfo} bridge
+ * @property {Map<string, string>} buttonFeatures button id -> feature external id
  * @property {string | null} smartAwayFeature
  * @property {Map<string, string>} deviceOfFeature feature external id -> device external id
  */
 
 const PERCENT = 'percent';
+
+/** Gladys BUTTON_STATUS values (server/utils/constants.js). */
+export const BUTTON_VALUES = Object.freeze({
+  [PRESSES.CLICK]: 1,
+  [PRESSES.DOUBLE]: 2,
+  [PRESSES.LONG_PRESS]: 3,
+  [PRESSES.LONG_RELEASE]: 4,
+});
+
+const BUTTON_OPTIONS = [
+  { value: 1, label: 'Click', sort_order: 0 },
+  { value: 2, label: 'Double click', sort_order: 1 },
+  { value: 3, label: 'Long press', sort_order: 2 },
+  { value: 4, label: 'Long press released', sort_order: 3 },
+];
 
 const feature = (externalId, name, category, type, extra = {}) => ({
   name,
@@ -147,6 +165,7 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
     batteryFeatures: new Map(),
     batterySources: new Map(),
     bridge: model.bridge,
+    buttonFeatures: new Map(),
     smartAwayFeature: null,
     deviceOfFeature: new Map(),
   };
@@ -178,12 +197,15 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
   // A serial shared by two devices (or with the bridge) cannot identify one:
   // those zones take the project-scoped form, stable across reloads.
   const serialCount = new Map([[bridgeSerial, 1]]);
-  for (const zone of model.zones) {
-    if (zone.serial) serialCount.set(zone.serial, (serialCount.get(zone.serial) ?? 0) + 1);
+  for (const item of [...model.zones, ...model.buttonDevices]) {
+    if (item.serial) serialCount.set(item.serial, (serialCount.get(item.serial) ?? 0) + 1);
   }
+  const uniqueSerial = (serial) => Boolean(serial) && serialCount.get(serial) === 1;
   for (const zone of model.zones) {
-    const unique = zone.serial && serialCount.get(zone.serial) === 1;
-    const ids = externalIds('zone', unique ? zone.serial : `${bridgeSerial}-zone-${zone.id}`);
+    const ids = externalIds(
+      'zone',
+      uniqueSerial(zone.serial) ? zone.serial : `${bridgeSerial}-zone-${zone.id}`,
+    );
     const keys = {};
     const features = zoneFeatureSpecs(zone).map(([key, name, category, type, extra]) => {
       const externalId = ids.feature(key);
@@ -202,6 +224,38 @@ export function buildCatalog(model, { externalIds, bridgeSerial }) {
         ...param('LUTRON_AREA', zone.area),
         ...param('LUTRON_TYPE', zone.type),
         ...param('LUTRON_MODEL', zone.model),
+      ],
+    });
+  }
+
+  for (const remote of model.buttonDevices) {
+    const ids = externalIds(
+      'remote',
+      uniqueSerial(remote.serial) ? remote.serial : `${bridgeSerial}-device-${remote.id}`,
+    );
+    const used = new Set();
+    const features = remote.buttons.map((button) => {
+      let key = `button-${button.number}`;
+      if (used.has(key)) key = `${key}-${button.id}`;
+      used.add(key);
+      const externalId = ids.feature(key);
+      catalog.buttonFeatures.set(button.id, externalId);
+      return feature(externalId, button.name, C.BUTTON, T.BUTTON.CLICK, {
+        read_only: true,
+        has_feedback: false,
+        min: 1,
+        max: 4,
+        supported_options: BUTTON_OPTIONS,
+      });
+    });
+    addDevice(ids, {
+      name: remote.name,
+      model: remote.model ?? remote.type,
+      features,
+      params: [
+        ...param('LUTRON_AREA', remote.area),
+        ...param('LUTRON_TYPE', remote.type),
+        ...param('LUTRON_MODEL', remote.model),
       ],
     });
   }

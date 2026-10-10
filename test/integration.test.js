@@ -54,7 +54,7 @@ export async function startIntegration(t, { routes = casetaRoutes(), devices, op
 test('connected: the project in the Discover tab, states once the devices are created', async (t) => {
   const { gladys, lutron } = await startIntegration(t);
   const [devices] = gladys.callsOf('publishDiscoveredDevices').at(-1);
-  assert.equal(devices.length, 5 + 2 + lutron.system.model.scenes.length + 1);
+  assert.equal(devices.length, 5 + 2 + 2 + lutron.system.model.scenes.length + 1);
   assert.equal(gladys.states().length, 0, 'nothing created yet');
 
   for (const device of gladys.createAll()) await lutron.onDeviceCreated(device);

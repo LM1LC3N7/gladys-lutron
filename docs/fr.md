@@ -95,6 +95,23 @@ L'option **Boutons des télécommandes Pico** règle la détection des appuis :
 - **Lent** : comme Normal, avec des délais plus larges (0,45 s pour un
   double clic, 0,75 s pour un appui long), pour ceux qui appuient lentement.
 
+Exemples avec le déclencheur « Changement d'état de l'appareil » sur un
+bouton de Pico :
+
+| Bouton et type d'appui                                | Scène                                     |
+| ----------------------------------------------------- | ----------------------------------------- |
+| « On », **Clic**                                      | allumer les lumières du salon             |
+| « On », **Double clic**                               | lancer la scène « Cinéma »                |
+| « Off », **Appui long**                               | éteindre toutes les lumières de la maison |
+| « Raise », **Appui long** puis **Appui long relâché** | démarrer, puis arrêter, une variation     |
+
+Les boutons Raise et Lower (monter, descendre) répètent tant qu'on les
+tient : leur appui long est détecté 0,25 s plus tard que les autres boutons,
+pour qu'un appui court reste un clic. Deux clics identiques à la suite sont
+deux événements : chacun lance la scène. La Pico n'indique pas le niveau de
+sa pile (Lutron ne le transmet pas). Les noms des boutons restent en anglais
+(On, Off, Favorite, Raise, Lower…), comme sur la télécommande.
+
 ## Durée de fondu
 
 La **durée de fondu par défaut** s'applique à chaque niveau envoyé par
