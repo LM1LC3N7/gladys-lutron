@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Gladys integration SDK 0.15: poll-frequency and batch validation of the discovered devices, state heartbeat, the SDK fake Gladys for the tests.
+
 ## [0.1.0] - 2026-10-10
 
 ### Added
