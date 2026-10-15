@@ -201,7 +201,11 @@ To check on the maintainer's hardware (Caséta Smart Hub, Diva, Pico):
 
 - [ ] mDNS answer of the bridge: host name `Lutron-<hex>.local`, `SYSTYPE`
       value, and whether the Gladys core relays it (`scanNetwork`).
-- [ ] Pairing end to end, then the status "Connected to … LEAP x.y".
+- [x] Pairing end to end, then the status "Connected to … LEAP x.y"
+      (2026-10-15, Caséta Smart Hub: everything works; the overview widget
+      said "Not paired yet" until a restart, fixed: it reads the pairing from
+      the bridge controller, the core echoes no config update for the
+      integration's own `setConfig`).
 - [ ] What a bridge does with a certificate it no longer knows (reset
       bridge): TLS alert or silent close (see milestone 2 findings).
 

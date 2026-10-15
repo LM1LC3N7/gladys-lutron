@@ -27,6 +27,11 @@ next milestones. The research behind them is in [AUDIT.md](./AUDIT.md).
   acknowledgement within 5 s, widget answer within 15 s.
 - Never log a private key, certificate, serial number in clear or any
   secret config value.
+- The pairing lives in the bridge controller (`bridge.config`): the core
+  pushes no config update back for the integration's own `setConfig`, so
+  the `config` of `src/gladys/integration.js` keeps the startup values until
+  a restart or a save from the UI. Read the credentials, the bridge host and
+  serial from `bridge.config`.
 - Button presses are `button`/`click` features published with
   `publishState` on every press (never deduplicated, never replayed); other
   states go through `src/gladys/states.js` (created features only,

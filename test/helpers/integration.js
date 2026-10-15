@@ -9,17 +9,20 @@ import { casetaRoutes } from './pylutronBridge.js';
 import { CREDENTIALS } from './tls.js';
 import { waitFor } from './waitFor.js';
 
-const PAIRED = {
+export const PAIRED = {
   bridge_host: '127.0.0.1',
   leap_key: CREDENTIALS.key,
   leap_cert: CREDENTIALS.cert,
   leap_ca: CREDENTIALS.ca,
 };
 
-export async function startIntegration(t, { routes = casetaRoutes(), devices, options = {} } = {}) {
+export async function startIntegration(
+  t,
+  { routes = casetaRoutes(), devices, options = {}, config = PAIRED, waitReady = true } = {},
+) {
   const bridge = await startFakeBridge({ routes });
   t.after(() => bridge.close());
-  const gladys = createMemoryGladys({ config: { ...PAIRED }, devices });
+  const gladys = createMemoryGladys({ config: { ...config }, devices });
   const lutron = createLutronIntegration({
     gladys,
     logger: silentLogger,
@@ -39,6 +42,6 @@ export async function startIntegration(t, { routes = casetaRoutes(), devices, op
   });
   t.after(() => lutron.close());
   await lutron.applyConfig(gladys.config);
-  await waitFor(() => lutron.system.ready, { what: 'the model' });
+  if (waitReady) await waitFor(() => lutron.system.ready, { what: 'the model' });
   return { bridge, gladys, lutron };
 }

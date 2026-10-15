@@ -131,7 +131,7 @@ export function createLutronIntegration({
     tracker.reset();
     catalog = buildCatalog(model, {
       externalIds: (type, id) => gladys.externalIds(type, id),
-      bridgeSerial: model.bridge.serial ?? config.bridgeSerial ?? 'bridge',
+      bridgeSerial: model.bridge.serial ?? bridge.config?.bridgeSerial ?? 'bridge',
     });
     logger.info(
       `Lutron project loaded: ${model.zones.length} zones, ${model.buttonDevices.length} remotes and keypads, ${model.scenes.length} scenes, ${model.occupancyGroups.length} occupancy groups`,
@@ -222,7 +222,11 @@ export function createLutronIntegration({
       ...(model?.occupancyGroups ?? []).flatMap((group) => group.sensorDeviceIds),
     ].filter((deviceId) => system.batteries.has(deviceId));
     return buildOverview({
-      paired: Boolean(config.credentials),
+      // The bridge controller holds the live pairing: "Pair the bridge" and
+      // "Forget the bridge" save it with setConfig, and the core pushes no
+      // config update back for the integration's own writes, so `config`
+      // keeps the startup values until the next restart.
+      paired: Boolean(bridge.config?.credentials),
       connected: system.ready,
       label: bridgeLabel(bridge.info ?? model?.bridge ?? null),
       leapVersion: status?.leapVersion ?? null,

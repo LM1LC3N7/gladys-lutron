@@ -3,7 +3,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { startIntegration } from './helpers/integration.js';
+import { PAIRED, startIntegration } from './helpers/integration.js';
+import { CREDENTIALS } from './helpers/tls.js';
 import { waitFor } from './helpers/waitFor.js';
 
 test('connected: the project in the Discover tab, states once the devices are created', async (t) => {
@@ -109,4 +110,36 @@ test('forgetting the bridge during an outage cancels the offline report', async 
   await lutron.bridge.forget();
   await new Promise((resolve) => setTimeout(resolve, 150));
   assert.equal(gladys.callsOf('publishSceneEvent').length, 0);
+});
+
+// Reported on real hardware (2026-10-15): the bridge worked after "Pair the
+// bridge", but the overview widget kept saying "Not paired yet" until the
+// container restarted. The core pushes no config update for the integration's
+// own setConfig, so the widget must read the pairing from the bridge
+// controller, never from the configuration seen at startup.
+const isNotPaired = (content) => /Not paired yet/.test(content.components[0].text?.en ?? '');
+
+test('the widget sees a pairing made without a restart', async (t) => {
+  const { lutron } = await startIntegration(t, {
+    config: { bridge_host: PAIRED.bridge_host },
+    waitReady: false,
+    options: {
+      controllerOptions: {
+        pair: async () => ({ ...CREDENTIALS, leapVersion: '1.123', processor: false }),
+      },
+    },
+  });
+  assert.ok(isNotPaired(lutron.getOverview()), 'not paired before the button');
+  await lutron.bridge.pairAction();
+  await waitFor(() => lutron.system.ready, { what: 'the model' });
+  const overview = lutron.getOverview();
+  assert.ok(!isNotPaired(overview), 'paired without a restart');
+  assert.equal(overview.components[1].items[0].value.en, 'Connected');
+});
+
+test('the widget sees a bridge forgotten without a restart', async (t) => {
+  const { lutron } = await startIntegration(t);
+  assert.ok(!isNotPaired(lutron.getOverview()));
+  await lutron.bridge.forget();
+  assert.ok(isNotPaired(lutron.getOverview()));
 });

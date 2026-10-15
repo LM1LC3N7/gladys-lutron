@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The "Lutron overview" widget said "Not paired yet" after a successful
+  pairing (and "paired" after "Forget the bridge") until the integration
+  restarted: Gladys sends no configuration update back for the integration's
+  own writes, so the widget now reads the pairing from the bridge controller.
+  Seen on the maintainer's Caséta Smart Hub. The bridge serial used in the
+  device ids comes from the same place, so it no longer depends on a restart
+  after pairing (only when the bridge does not report its serial).
+
 ## [0.1.1] - 2026-10-13
 
 ### Changed
