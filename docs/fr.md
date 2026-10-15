@@ -5,17 +5,20 @@ utilisez vos télécommandes Pico et vos claviers dans les scènes Gladys. Tout 
 votre réseau local**, avec le protocole LEAP de Lutron : aucun compte Lutron,
 aucun cloud, aucune connexion Internet nécessaire à l'intégration.
 
-> **Première version, en test.** Tout ce qui suit est développé et testé
-> sur des bridges simulés ; la vérification sur du vrai matériel est en
-> cours (Caséta d'abord). Signalez toute anomalie avec le bouton Diagnostic.
-> Les évolutions sont listées dans le
+> **Vérifiée sur un vrai Caséta.** L'association, la découverte et le
+> pilotage fonctionnent avec un Caséta Smart Hub (L-BDG2) et un variateur
+> Diva. Les autres systèmes (Smart Bridge PRO, RA2 Select, RadioRA 3,
+> HomeWorks QSX) sont testés contre les réponses enregistrées de
+> pylutron-caseta, la librairie qu'utilise Home Assistant : testeurs
+> recherchés. Signalez toute anomalie avec le bouton Diagnostic. Les
+> évolutions sont listées dans le
 > [journal des modifications](../CHANGELOG.md).
 
 ## Systèmes compatibles
 
 | Système                                                  | État                            |
 | -------------------------------------------------------- | ------------------------------- |
-| Caséta Smart Hub (L-BDG2, vendu dans les kits de départ) | compatible                      |
+| Caséta Smart Hub (L-BDG2, vendu dans les kits de départ) | compatible, vérifié             |
 | Caséta Smart Bridge PRO (L-BDGPRO2)                      | compatible                      |
 | RA2 Select (RR-SEL-REP2)                                 | compatible                      |
 | RadioRA 3, HomeWorks QSX                                 | compatible, testeurs recherchés |

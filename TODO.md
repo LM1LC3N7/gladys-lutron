@@ -391,8 +391,9 @@ programming, battery answers of RA3 sensors.
   passes (warnings: image not published yet, cover not on `main` yet).
 - Several bridges: not requested (question 5), stays out; documented
   ("one bridge per Gladys for now").
-- Forum announcement drafted in French: `docs/forum-announcement.fr.md`
-  (to post in topic 10385 once 0.1.0 is published and checked).
+- Forum announcement: the draft of 2026-10-10 (written before the
+  hardware) was removed on 2026-10-15; the post is written from the
+  checked state, in its own topic of the Développement category.
 
 ## Next (after the hardware checks)
 
@@ -405,8 +406,10 @@ programming, battery answers of RA3 sensors.
   - [ ] Unexplained: the project was loaded a second time 14 s after the
         pairing, without any log line saying why. Watch for it on the next
         pairing.
+  - [ ] Still to try: the Pico presses, the second Diva (the bridge reports
+        1 dimmer and 1 Pico), the Diagnostics export.
 - [x] Run the **Release** workflow (0.1.0 on 2026-10-10, 0.1.1 on 2026-10-13,
-      0.1.2 on 2026-10-15).
+      0.1.2 and 0.1.3 on 2026-10-15).
 - [ ] Add the repository topic `gladys-assistant-integration`, post the
       announcement.
 - [ ] RA3 / QSX testers: area scene activation, `MultiTap` / `LongHold`,

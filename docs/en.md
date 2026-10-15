@@ -5,16 +5,18 @@ remotes and keypads in Gladys scenes. Everything runs **on your local network**,
 Lutron's LEAP protocol: no Lutron account, no cloud, no Internet connection
 needed by the integration.
 
-> **First version, being tested.** Everything below is implemented and
-> tested against simulated bridges; it is being checked on real hardware
-> (Caséta first). Report anything odd with the Diagnostics button. Changes
+> **Checked on a real Caséta.** Pairing, discovery and control work on a
+> Caséta Smart Hub (L-BDG2) with a Diva dimmer. The other systems (Smart
+> Bridge PRO, RA2 Select, RadioRA 3, HomeWorks QSX) are tested against the
+> recorded answers of pylutron-caseta, the library Home Assistant uses:
+> testers wanted. Report anything odd with the Diagnostics button. Changes
 > are listed in the [changelog](../CHANGELOG.md).
 
 ## Supported systems
 
 | System                                          | Status                    |
 | ----------------------------------------------- | ------------------------- |
-| Caséta Smart Hub (L-BDG2, sold in starter kits) | supported                 |
+| Caséta Smart Hub (L-BDG2, sold in starter kits) | supported, checked        |
 | Caséta Smart Bridge PRO (L-BDGPRO2)             | supported                 |
 | RA2 Select (RR-SEL-REP2)                        | supported                 |
 | RadioRA 3, HomeWorks QSX                        | supported, testers wanted |

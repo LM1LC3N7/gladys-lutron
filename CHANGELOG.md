@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Docs: Caséta checked on real hardware (Smart Hub L-BDG2 and a Diva dimmer:
+  pairing, discovery, control); the other systems are tested against the
+  recorded answers of pylutron-caseta, testers wanted.
+
 ## [0.1.3] - 2026-10-15
 
 ### Fixed
