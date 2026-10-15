@@ -18,7 +18,7 @@ export const PAIRED = {
 
 export async function startIntegration(
   t,
-  { routes = casetaRoutes(), devices, options = {}, config = PAIRED } = {},
+  { routes = casetaRoutes(), devices, options = {}, config = PAIRED, waitReady = true } = {},
 ) {
   const bridge = await startFakeBridge({ routes });
   t.after(() => bridge.close());
@@ -28,9 +28,6 @@ export async function startIntegration(
     logger: silentLogger,
     version: 'test',
     ports: { leap: bridge.port },
-    publisherLimits: { flushDelayMs: 1 },
-    offlineAfterMs: 60,
-    ...options,
     controllerOptions: {
       createSession: (o) =>
         new LeapSession({
@@ -38,12 +35,13 @@ export async function startIntegration(
           connectionOptions: { ...o.connectionOptions, requestTimeoutMs: 150 },
           timings: { reconnectMinMs: 20, reconnectMaxMs: 40 },
         }),
-      ...options.controllerOptions,
     },
+    publisherLimits: { flushDelayMs: 1 },
+    offlineAfterMs: 60,
+    ...options,
   });
   t.after(() => lutron.close());
   await lutron.applyConfig(gladys.config);
-  // Unpaired: nothing to wait for.
-  if (config.leap_key) await waitFor(() => lutron.system.ready, { what: 'the model' });
+  if (waitReady) await waitFor(() => lutron.system.ready, { what: 'the model' });
   return { bridge, gladys, lutron };
 }

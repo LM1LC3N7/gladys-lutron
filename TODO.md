@@ -201,7 +201,11 @@ To check on the maintainer's hardware (Caséta Smart Hub, Diva, Pico):
 
 - [ ] mDNS answer of the bridge: host name `Lutron-<hex>.local`, `SYSTYPE`
       value, and whether the Gladys core relays it (`scanNetwork`).
-- [ ] Pairing end to end, then the status "Connected to … LEAP x.y".
+- [x] Pairing end to end, then the status "Connected to … LEAP x.y"
+      (2026-10-15, Caséta Smart Hub: everything works; the overview widget
+      said "Not paired yet" until a restart, fixed: it reads the pairing from
+      the bridge controller, the core echoes no config update for the
+      integration's own `setConfig`).
 - [ ] What a bridge does with a certificate it no longer knows (reset
       bridge): TLS alert or silent close (see milestone 2 findings).
 
@@ -395,14 +399,14 @@ programming, battery answers of RA3 sensors.
 - [ ] Maintainer: pair the Caséta Smart Hub, create the devices, try the
       Diva dimmers and the Pico (click, double, long), send the Diagnostics
       export; turn it into `test/fixtures/` and fix what differs.
-  - [x] Paired on 2026-10-15 (Smart Hub, LEAP 1.124: 1 zone, 1 Pico).
-        Found: the widget said "Not paired yet" until a restart, because
-        `setConfig` is not echoed by Gladys; fixed (the integration reads the
-        pairing from the bridge controller).
+  - [x] Paired on 2026-10-15 (Smart Hub, LEAP 1.124: 1 zone, 1 Pico); the
+        widget finding is fixed in 0.1.2 (see "To check on the maintainer's
+        hardware").
   - [ ] Unexplained: the project was loaded a second time 14 s after the
         pairing, without any log line saying why. Watch for it on the next
         pairing.
-- [x] Run the **Release** workflow (0.1.0 on 2026-10-10, 0.1.1 on 2026-10-13).
+- [x] Run the **Release** workflow (0.1.0 on 2026-10-10, 0.1.1 on 2026-10-13,
+      0.1.2 on 2026-10-15).
 - [ ] Add the repository topic `gladys-assistant-integration`, post the
       announcement.
 - [ ] RA3 / QSX testers: area scene activation, `MultiTap` / `LongHold`,

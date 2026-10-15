@@ -8,8 +8,19 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
-- After pairing from the configuration screen, the "Lutron overview" widget kept saying "Not paired yet" until the container restarted: Gladys does not send the saved values back, so the integration now takes the pairing from the bridge controller. Same after "Forget the bridge".
-- The pairing answer no longer keeps a 10-second timer running once the bridge is connected.
+- The answer of "Pair the bridge" no longer leaves a 10-second timer running once the bridge is connected.
+
+## [0.1.2] - 2026-10-15
+
+### Fixed
+
+- The "Lutron overview" widget said "Not paired yet" after a successful
+  pairing (and "paired" after "Forget the bridge") until the integration
+  restarted: Gladys sends no configuration update back for the integration's
+  own writes, so the widget now reads the pairing from the bridge controller.
+  Seen on the maintainer's Caséta Smart Hub. The bridge serial used in the
+  device ids comes from the same place, so it no longer depends on a restart
+  after pairing (only when the bridge does not report its serial).
 
 ## [0.1.1] - 2026-10-13
 
@@ -73,5 +84,6 @@ All notable changes to this project are documented here. The format follows
 - Long-run test of reconnections (no leaked timers, listeners or
   connections); a button press is never replayed on device creation.
 
-[Unreleased]: https://github.com/LM1LC3N7/gladys-lutron/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/LM1LC3N7/gladys-lutron/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/LM1LC3N7/gladys-lutron/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/LM1LC3N7/gladys-lutron/compare/v0.1.0...v0.1.1
