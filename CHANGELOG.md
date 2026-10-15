@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The answer of "Pair the bridge" no longer leaves a 10-second timer running once the bridge is connected.
+
 ## [0.1.2] - 2026-10-15
 
 ### Fixed
