@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-15
+
 ### Fixed
 
 - The answer of "Pair the bridge" no longer leaves a 10-second timer running once the bridge is connected.
@@ -84,6 +86,7 @@ All notable changes to this project are documented here. The format follows
 - Long-run test of reconnections (no leaked timers, listeners or
   connections); a button press is never replayed on device creation.
 
-[Unreleased]: https://github.com/LM1LC3N7/gladys-lutron/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/LM1LC3N7/gladys-lutron/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/LM1LC3N7/gladys-lutron/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/LM1LC3N7/gladys-lutron/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/LM1LC3N7/gladys-lutron/compare/v0.1.0...v0.1.1

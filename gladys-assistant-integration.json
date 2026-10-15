@@ -6,8 +6,8 @@
     "en": "Lutron Caséta, RA2 Select, RadioRA 3, HomeWorks QSX, 100% local: lights, shades, fans, Picos.",
     "fr": "Lutron Caséta, RA2 Select, RadioRA 3, HomeWorks QSX, 100 % local : lumières, stores, Pico."
   },
-  "version": "0.1.2",
-  "docker_image": "ghcr.io/lm1lc3n7/gladys-lutron:0.1.2",
+  "version": "0.1.3",
+  "docker_image": "ghcr.io/lm1lc3n7/gladys-lutron:0.1.3",
   "gladys_version": ">=5.1.1",
   "cover_image": "https://raw.githubusercontent.com/LM1LC3N7/gladys-lutron/main/cover.png",
   "categories": ["lighting"],

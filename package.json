@@ -1,6 +1,6 @@
 {
   "name": "gladys-lutron",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "Lutron integration for Gladys Assistant over the local LEAP protocol: Caséta, RA2 Select, RadioRA 3 and HomeWorks QSX.",
   "type": "module",
