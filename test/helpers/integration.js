@@ -9,22 +9,28 @@ import { casetaRoutes } from './pylutronBridge.js';
 import { CREDENTIALS } from './tls.js';
 import { waitFor } from './waitFor.js';
 
-const PAIRED = {
+export const PAIRED = {
   bridge_host: '127.0.0.1',
   leap_key: CREDENTIALS.key,
   leap_cert: CREDENTIALS.cert,
   leap_ca: CREDENTIALS.ca,
 };
 
-export async function startIntegration(t, { routes = casetaRoutes(), devices, options = {} } = {}) {
+export async function startIntegration(
+  t,
+  { routes = casetaRoutes(), devices, options = {}, config = PAIRED } = {},
+) {
   const bridge = await startFakeBridge({ routes });
   t.after(() => bridge.close());
-  const gladys = createMemoryGladys({ config: { ...PAIRED }, devices });
+  const gladys = createMemoryGladys({ config: { ...config }, devices });
   const lutron = createLutronIntegration({
     gladys,
     logger: silentLogger,
     version: 'test',
     ports: { leap: bridge.port },
+    publisherLimits: { flushDelayMs: 1 },
+    offlineAfterMs: 60,
+    ...options,
     controllerOptions: {
       createSession: (o) =>
         new LeapSession({
@@ -32,13 +38,12 @@ export async function startIntegration(t, { routes = casetaRoutes(), devices, op
           connectionOptions: { ...o.connectionOptions, requestTimeoutMs: 150 },
           timings: { reconnectMinMs: 20, reconnectMaxMs: 40 },
         }),
+      ...options.controllerOptions,
     },
-    publisherLimits: { flushDelayMs: 1 },
-    offlineAfterMs: 60,
-    ...options,
   });
   t.after(() => lutron.close());
   await lutron.applyConfig(gladys.config);
-  await waitFor(() => lutron.system.ready, { what: 'the model' });
+  // Unpaired: nothing to wait for.
+  if (config.leap_key) await waitFor(() => lutron.system.ready, { what: 'the model' });
   return { bridge, gladys, lutron };
 }

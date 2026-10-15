@@ -3,7 +3,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { startIntegration } from './helpers/integration.js';
+import { MESSAGES } from '../src/gladys/messages.js';
+import { PAIRED, startIntegration } from './helpers/integration.js';
 import { waitFor } from './helpers/waitFor.js';
 
 test('connected: the project in the Discover tab, states once the devices are created', async (t) => {
@@ -109,4 +110,33 @@ test('forgetting the bridge during an outage cancels the offline report', async 
   await lutron.bridge.forget();
   await new Promise((resolve) => setTimeout(resolve, 150));
   assert.equal(gladys.callsOf('publishSceneEvent').length, 0);
+});
+
+test('paired from the configuration screen: the widget knows it without a restart (hardware finding)', async (t) => {
+  // setConfig does not echo a config-updated: Gladys sends the new values
+  // back only when the container reconnects.
+  const { gladys, lutron } = await startIntegration(t, {
+    config: { bridge_host: '127.0.0.1' },
+    options: {
+      controllerOptions: {
+        pair: async () => ({
+          key: PAIRED.leap_key,
+          cert: PAIRED.leap_cert,
+          ca: PAIRED.leap_ca,
+          leapVersion: '1.124',
+          processor: false,
+        }),
+      },
+    },
+  });
+  const notPaired = () => lutron.getOverview().components[0].text === MESSAGES.notPaired;
+  assert.ok(notPaired());
+  await lutron.bridge.pairAction();
+  await waitFor(() => lutron.system.ready, { what: 'the model' });
+  assert.equal(lutron.config.credentials, null, 'not echoed by Gladys');
+  assert.ok(!notPaired(), 'the widget shows the bridge');
+  assert.ok(gladys.callsOf('publishDiscoveredDevices').at(-1)[0].length > 0);
+
+  await lutron.bridge.forget();
+  assert.ok(notPaired(), 'forgotten: back to "not paired", still no echo');
 });

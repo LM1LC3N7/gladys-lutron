@@ -71,6 +71,11 @@ export function createLutronIntegration({
     }
   };
 
+  // The controller keeps the pairing current (pair, forget, serial read):
+  // `config` only gets it back with the next config-updated or reconnection,
+  // since setConfig does not echo.
+  const pairing = () => bridge.config ?? config;
+
   const ourDevices = () => {
     const ids = new Set(catalog?.devices.map((device) => device.external_id) ?? []);
     return (gladys.devices ?? []).filter((device) => ids.has(device.external_id));
@@ -131,7 +136,7 @@ export function createLutronIntegration({
     tracker.reset();
     catalog = buildCatalog(model, {
       externalIds: (type, id) => gladys.externalIds(type, id),
-      bridgeSerial: model.bridge.serial ?? config.bridgeSerial ?? 'bridge',
+      bridgeSerial: model.bridge.serial ?? pairing().bridgeSerial ?? 'bridge',
     });
     logger.info(
       `Lutron project loaded: ${model.zones.length} zones, ${model.buttonDevices.length} remotes and keypads, ${model.scenes.length} scenes, ${model.occupancyGroups.length} occupancy groups`,
@@ -222,7 +227,7 @@ export function createLutronIntegration({
       ...(model?.occupancyGroups ?? []).flatMap((group) => group.sensorDeviceIds),
     ].filter((deviceId) => system.batteries.has(deviceId));
     return buildOverview({
-      paired: Boolean(config.credentials),
+      paired: Boolean(pairing().credentials),
       connected: system.ready,
       label: bridgeLabel(bridge.info ?? model?.bridge ?? null),
       leapVersion: status?.leapVersion ?? null,

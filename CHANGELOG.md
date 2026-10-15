@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- After pairing from the configuration screen, the "Lutron overview" widget kept saying "Not paired yet" until the container restarted: Gladys does not send the saved values back, so the integration now takes the pairing from the bridge controller. Same after "Forget the bridge".
+- The pairing answer no longer keeps a 10-second timer running once the bridge is connected.
+
 ## [0.1.1] - 2026-10-13
 
 ### Changed

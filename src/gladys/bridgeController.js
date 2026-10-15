@@ -240,10 +240,12 @@ export function createBridgeController({
         };
         const current = startSession();
         // Give the first connection a moment, to name the bridge in the answer.
+        let timer;
         await Promise.race([
           new Promise((resolve) => current.once('connected', resolve)),
-          new Promise((resolve) => setTimeout(resolve, 10_000)),
+          new Promise((resolve) => (timer = setTimeout(resolve, 10_000))),
         ]);
+        clearTimeout(timer);
         return MESSAGES.paired(host, info);
       } catch (error) {
         logger.warn(`Pairing failed: ${error.message}`);

@@ -395,8 +395,16 @@ programming, battery answers of RA3 sensors.
 - [ ] Maintainer: pair the Caséta Smart Hub, create the devices, try the
       Diva dimmers and the Pico (click, double, long), send the Diagnostics
       export; turn it into `test/fixtures/` and fix what differs.
-- [ ] Run the **Release** workflow (minor → 0.1.0), add the repository topic
-      `gladys-assistant-integration`, post the announcement.
+  - [x] Paired on 2026-10-15 (Smart Hub, LEAP 1.124: 1 zone, 1 Pico).
+        Found: the widget said "Not paired yet" until a restart, because
+        `setConfig` is not echoed by Gladys; fixed (the integration reads the
+        pairing from the bridge controller).
+  - [ ] Unexplained: the project was loaded a second time 14 s after the
+        pairing, without any log line saying why. Watch for it on the next
+        pairing.
+- [x] Run the **Release** workflow (0.1.0 on 2026-10-10, 0.1.1 on 2026-10-13).
+- [ ] Add the repository topic `gladys-assistant-integration`, post the
+      announcement.
 - [ ] RA3 / QSX testers: area scene activation, `MultiTap` / `LongHold`,
       LED behaviour, sensor batteries (see milestone 7).
 - [ ] Docker Hub rate limits: `build.yml` / `release.yml` still pull from
